@@ -86,6 +86,16 @@ def main():
     if not raiz:
         return  # não é repo git
 
+    # Worktree vinculada: o ciclo de checkpoint pertence à árvore principal.
+    # Sem esta guarda, um subagent implementando num worktree receberia a
+    # ordem de checkpoint no meio do trabalho — as tags são compartilhadas.
+    git_dir = git("rev-parse", "--absolute-git-dir", cwd=raiz)
+    comum = git("rev-parse", "--git-common-dir", cwd=raiz)
+    if git_dir and comum and os.path.realpath(git_dir) != os.path.realpath(
+        os.path.join(raiz, comum) if not os.path.isabs(comum) else comum
+    ):
+        return
+
     email = git("config", "user.email", cwd=raiz) or ""
     slug = (
         re.sub(r"[^a-z0-9]+", "-", email.split("@")[0].lower()).strip("-") or "anon"
