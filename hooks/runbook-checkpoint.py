@@ -29,7 +29,10 @@ REGISTRO = os.path.expanduser("~/.claude/state/runbook-checkpoint-repos")
 
 # Prefixos que o próprio fluxo gera e que não contam como ticket.
 NAO_CONTA = re.compile(r"^[0-9a-f]+\s+(docs|chore|refactor|ci|style|test)[(:]", re.I)
-CHECKPOINT = re.compile(r"checkpoint", re.I)
+# Só o formato canônico do passo 8 (`refactor: checkpoint <sha..sha> — ...`)
+# é um checkpoint. Commits que apenas mencionam a palavra — triagem de
+# achados, docs sobre o fluxo — não fecham ciclo nenhum.
+CHECKPOINT = re.compile(r"^[0-9a-f]+\s+refactor(\([^)]*\))?:\s*checkpoint\b", re.I)
 
 
 def git(*args, cwd):
@@ -145,7 +148,10 @@ def main():
             f"não foi movida — o ciclo do passo 8 ficou pela metade. Confirme com "
             f"`git log --oneline {tag}..HEAD` e, se o checkpoint de fato já rodou, "
             f"feche o ciclo agora:\n"
-            f"    git tag -f {tag} && git push -f origin {tag}"
+            f"    git tag -f {tag} && git push -f origin {tag}\n"
+            f"Se esta sessão NÃO está executando o fluxo /ticket:implement, não "
+            f"toque na tag: apenas informe o usuário e siga — fechar o ciclo é "
+            f"responsabilidade da sessão do fluxo, e o aviso reaparecerá lá."
         )
 
     if n >= LIMITE:
@@ -156,7 +162,10 @@ def main():
             f"`{tag}..HEAD` e o diretório dos tickets.\n"
             f"2. Correções pequenas viram um único commit `refactor:`; achados "
             f"grandes viram tickets novos.\n"
-            f"3. Mova e publique a tag: `git tag -f {tag} && git push -f origin {tag}`"
+            f"3. Mova e publique a tag: `git tag -f {tag} && git push -f origin {tag}`\n\n"
+            f"Se esta sessão NÃO está executando o fluxo /ticket:implement, não "
+            f"rode o checkpoint nem toque na tag: apenas informe o usuário e siga "
+            f"— o aviso reaparecerá no próximo commit da sessão do fluxo."
         )
 
 
