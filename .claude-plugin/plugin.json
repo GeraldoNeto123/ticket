@@ -1,7 +1,7 @@
 {
   "name": "ticket",
-  "version": "1.1.1",
-  "description": "Fluxo de implementação de tickets: reivindicação, implementação escopada com TDD, protocolo de erro de spec, commit → review → amend e checkpoint de consistência a cada 3 tickets.",
+  "version": "1.2.0",
+  "description": "Fluxo de implementação de tickets: reivindicação, implementação escopada com TDD, protocolo de erro de spec, commit → review → amend e checkpoint de consistência a cada 5 tickets.",
   "author": {
     "name": "Geraldo Neto",
     "url": "https://github.com/GeraldoNeto123"

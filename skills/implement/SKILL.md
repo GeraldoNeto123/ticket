@@ -1,6 +1,6 @@
 ---
 name: implement
-description: "Executa um ticket do fluxo de implementação: reivindicação do ticket + implementação escopada + protocolo de erro de spec + verificação + commit/code-review/amend + encerramento + checkpoint de consistência a cada 3 tickets."
+description: "Executa um ticket do fluxo de implementação: reivindicação do ticket + implementação escopada + protocolo de erro de spec + verificação + commit/code-review/amend + encerramento + checkpoint de consistência a cada 5 tickets."
 disable-model-invocation: true
 ---
 
@@ -114,7 +114,7 @@ O commit da linha acompanha o desfecho: no caso **factual**, ela entra no mesmo 
 
 ## 8. Checkpoint de consistência
 
-A contagem é feita pelo hook `runbook-checkpoint.py` (PostToolUse, roda sozinho depois de todo `git commit`) — você não precisa contar. Ele avisa quando o limite de **3** commits de ticket é atingido, e também quando a tag sumiu ou ficou para trás.
+A contagem é feita pelo hook `runbook-checkpoint.py` (PostToolUse, roda sozinho depois de todo `git commit`) — você não precisa contar. Ele avisa quando o limite de **5** commits de ticket é atingido, e também quando a tag sumiu ou ficou para trás.
 
 A tag do ciclo é **escopada por operador**: `runbook-checkpoint-<slug>`, com o slug derivado da parte local do `git config user.email` (minúsculas, sequências não alfanuméricas viram um `-`). Cada operador tem ciclo próprio e o hook conta só os commits dele — é o que permite mais de uma pessoa rodar o fluxo no mesmo repo sem uma sobrescrever a tag da outra. Os avisos do hook trazem o nome exato da sua tag; use-o como veio (na dúvida, `git tag -l 'runbook-checkpoint-*'` lista as existentes).
 
@@ -130,26 +130,26 @@ O aviso chega no commit do passo 5.1, ainda antes da revisão e do amend. **Term
 
 Ao receber o aviso, dispare o agent `checkpoint-reviewer` passando o intervalo (`runbook-checkpoint-<slug>..HEAD`) e **onde vivem os tickets e o spec** — o diretório, em modo arquivo; o repo/projeto e o CLI de leitura, em modo tracker.
 
-Com o relatório em mãos, correções pequenas viram um único commit `refactor:` seu — com a palavra `checkpoint` na mensagem (ex.: `refactor: checkpoint <sha..sha> — <resumo>`): é por ela que o hook detecta um checkpoint que rodou sem a tag ter sido movida. Achados grandes viram tickets novos — e **abrir ticket tem regra**, senão o tracker vira depósito:
+Com o relatório em mãos, correções pequenas viram um único commit `refactor:` seu — com a palavra `checkpoint` na mensagem (ex.: `refactor: checkpoint <sha..sha> — <resumo>`): é por ela que o hook detecta um checkpoint que rodou sem a tag ter sido movida.
 
-1. **Confirme a duplicata você mesmo.** O agent já buscou, mas confira antes de criar:
+O resto do relatório **nunca entra na fila da feature**. A regra existe por experiência: quando todo achado virava ticket na mesma pasta numerada, a fila crescia mais rápido do que era consumida (13 tickets viraram 39) e o "done" virou alvo móvel. A fila converge para o escopo original; achado fica em quarentena até um humano promovê-lo. Por classe do relatório:
+
+1. **Defeitos reais** → registro de achado **fora da fila**. Em modo arquivo: um arquivo por achado em `<dir-dos-tickets>/checkpoint/<slug-da-âncora>.md` — subpasta própria, sem número da sequência da feature. Em modo tracker: issue com rótulos `checkpoint` + `needs-triage`. Nos dois modos o status de nascença é **sempre** `needs-triage` — nunca `ready-for-agent`: promover achado a item de fila é decisão humana, via triagem, não sua. Antes de criar, confirme a duplicata você mesmo:
 
    ```bash
-   gh issue list --search "<âncora>" --state all --limit 20   # GitHub
-   glab issue list --search "<âncora>" --all                  # GitLab
-   grep -ril "<âncora>" <dir-dos-tickets>                     # arquivo
+   grep -ril "<âncora>" <dir-dos-tickets>/checkpoint/          # arquivo
+   gh issue list --search "<âncora>" --state all --limit 20    # GitHub
+   glab issue list --search "<âncora>" --all                   # GitLab
    ```
 
-   Se já existe: comente na issue existente com o que o checkpoint acrescenta e **não abra outra**. Duas issues para o mesmo achado é o defeito mais comum deste passo.
-
-2. **Use o mínimo de corpo.** Um achado sem isso não é acionável por quem pegar depois:
+   Se já existe: acrescente ao registro existente o que o novo checkpoint adiciona e **não crie outro**. Corpo mínimo de cada achado:
 
    ```markdown
    ## Achado
-   <uma frase: o que está inconsistente entre os tickets>
+   <uma frase: o defeito, do ponto de vista de quem sofre o efeito>
 
    ## Onde
-   <arquivo:linha por ocorrência>
+   <arquivo por ocorrência, apontando símbolo ou trecho — sem número de linha, que envelhece>
 
    ## Por que nenhum ticket isolado viu
    <a justificativa de ter vindo do checkpoint>
@@ -157,14 +157,15 @@ Com o relatório em mãos, correções pequenas viram um único commit `refactor
    ## Âncora de busca
    `<termo exato: código de erro, símbolo, constraint>`
 
+   **Status:** needs-triage
+
    ---
    Origem: checkpoint-reviewer · intervalo `<sha..sha>`
    ```
 
-3. **Rotule sempre.** Nunca abra sem rótulo:
-   - `checkpoint` — sempre, marca a procedência e reduz o espaço de busca do próximo dedup.
-   - `needs-triage` — **padrão**. O achado descreve um problema, mas ainda não é um ticket implementável.
-   - `ready-for-agent` — só quando o achado já é um ticket completo: o que fazer, onde, e como saber que acabou. Na dúvida, `needs-triage`.
+2. **Inconsistências sem defeito** → uma linha cada em `<dir-dos-tickets>/checkpoint/registro.md` (crie se não existir). Não abrem arquivo próprio nem issue — são memória para a triagem humana e para o dedup do próximo checkpoint.
+
+3. **Propostas de processo** → reporte ao usuário no encerramento, textualmente. Mudam a skill ou o agent, nunca viram ticket do projeto — achado meta que vira ticket é o fluxo gerando trabalho sobre a própria burocracia.
 
 4. **Respeite o que é issue e o que não é.** Se o `issue-tracker.md` do projeto separa issue (unidade de trabalho) de spec/plano/ADR (documento), um achado que é documento vai para `docs/`, não para o tracker.
 

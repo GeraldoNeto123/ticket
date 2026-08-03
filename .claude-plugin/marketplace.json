@@ -9,7 +9,7 @@
     {
       "name": "ticket",
       "source": "./",
-      "description": "Fluxo de implementação de tickets: reivindicação, implementação escopada com TDD, protocolo de erro de spec, commit → review → amend e checkpoint de consistência a cada 3 tickets.",
+      "description": "Fluxo de implementação de tickets: reivindicação, implementação escopada com TDD, protocolo de erro de spec, commit → review → amend e checkpoint de consistência a cada 5 tickets.",
       "category": "engineering",
       "keywords": [
         "tickets",

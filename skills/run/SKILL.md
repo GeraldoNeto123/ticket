@@ -24,6 +24,8 @@ Antes do primeiro dispatch, crie `.scratch/ticket-run/<slug-da-feature>.md` com 
 
 O ledger é seu mapa de recuperação: os SHAs que ele nomeia existem no git mesmo quando seu contexto já não lembra deles. Se esta sessão for compactada no meio da fila, o ledger é o que permite retomar sem reexecutar nada.
 
+Ele é memória de **execução**, não conhecimento do projeto — os fatos duráveis já vivem no git e nos tickets — portanto **não é versionado**. Garanta isso antes de criá-lo: se `git check-ignore .scratch/ticket-run` falhar, acrescente `.scratch/ticket-run/` ao `.git/info/exclude` (ignore local do clone; não use `.gitignore`, que geraria um commit de ruído no repo).
+
 ## 3. O loop
 
 Primeiro, resolva o caminho da skill `implement`: ela mora ao lado desta, em `<diretório-base desta skill>/../implement/SKILL.md` (o diretório-base aparece no cabeçalho quando esta skill é invocada). Resolva para caminho absoluto uma vez e reuse em todos os dispatches.
@@ -39,7 +41,7 @@ Para cada ticket da frontier, despache **um** subagent com um prompt mínimo:
 Status possíveis e o que fazer com cada um:
 
 - **`DONE`** — registre no ledger e siga para o próximo da frontier. Não pause para aprovação entre tickets: este é o modo autônomo; quem quer acompanhar de perto roda `/ticket:implement` à mão.
-- **`DONE` + `CHECKPOINT_DUE`** — antes do próximo ticket, **você** roda o passo 8 da `/ticket:implement` aqui no orquestrador: dispare o agent `checkpoint-reviewer` com o intervalo e o local dos tickets, aplique correções pequenas num `refactor: checkpoint ...`, abra tickets para achados grandes (com as regras de dedup e rótulo de lá) e mova/publique a tag. O checkpoint é seu por dois motivos: subagent não despacha agent, e o acumulado é responsabilidade de quem enxerga a fila inteira. Registre o resultado no ledger e siga — achados novos nascem `needs-triage`, então **não** entram nesta frontier.
+- **`DONE` + `CHECKPOINT_DUE`** — antes do próximo ticket, **você** roda o passo 8 da `/ticket:implement` aqui no orquestrador: dispare o agent `checkpoint-reviewer` com o intervalo e o local dos tickets, aplique correções pequenas num `refactor: checkpoint ...`, abra tickets para achados grandes (com as regras de dedup e rótulo de lá) e mova/publique a tag. O checkpoint é seu por dois motivos: subagent não despacha agent, e o acumulado é responsabilidade de quem enxerga a fila inteira. Registre o resultado no ledger e siga — achados novos vão para a subpasta `checkpoint/`, fora da sequência da feature, e nascem `needs-triage`: **nunca** entram nesta frontier. A frontier é a foto do início da fila; quem a amplia é o usuário, via triagem, nunca o checkpoint.
 - **`SPEC_DESIGN`** — o subagent encontrou erro de spec de design, registrou o conflito no ticket e parou (passo 3 da implement). A skill de lá manda escalar para "uma sessão de effort alto apontada para esse registro" — **essa sessão é esta**. Pare o loop, apresente o registro ao usuário e espere a decisão dele. Decidido, o ticket volta à frontier.
 - **`BLOCKED`** — dono alheio, dependência externa, ou o subagent travou sem progresso. Pare e pergunte ao usuário. Nunca reordene a fila em silêncio para "contornar": bloqueio é informação, não obstáculo a esconder.
 

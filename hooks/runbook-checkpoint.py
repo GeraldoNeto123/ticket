@@ -24,7 +24,7 @@ import subprocess
 import sys
 
 TAG_BASE = "runbook-checkpoint"
-LIMITE = 3
+LIMITE = 5
 REGISTRO = os.path.expanduser("~/.claude/state/runbook-checkpoint-repos")
 
 # Prefixos que o próprio fluxo gera e que não contam como ticket.
