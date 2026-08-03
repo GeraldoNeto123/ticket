@@ -1,0 +1,23 @@
+{
+  "name": "ticket",
+  "owner": {
+    "name": "Geraldo Neto",
+    "url": "https://github.com/GeraldoNeto123"
+  },
+  "description": "Marketplace de plugin único: o fluxo /ticket:implement de implementação de tickets.",
+  "plugins": [
+    {
+      "name": "ticket",
+      "source": "./",
+      "description": "Fluxo de implementação de tickets: reivindicação, implementação escopada com TDD, protocolo de erro de spec, commit → review → amend e checkpoint de consistência a cada 3 tickets.",
+      "category": "engineering",
+      "keywords": [
+        "tickets",
+        "workflow",
+        "tdd",
+        "code-review",
+        "checkpoint"
+      ]
+    }
+  ]
+}
