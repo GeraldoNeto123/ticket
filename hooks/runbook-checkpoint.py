@@ -5,7 +5,7 @@ Roda como hook PostToolUse depois de todo `git commit`. Faz o que o passo 8 da
 skill `/ticket:implement` pedia, só que fora do alcance do esquecimento do modelo:
 
   - conta os commits de ticket **do operador** desde a tag escopada dele
-    (`runbook-checkpoint/<slug do e-mail do git>`) — cada operador tem ciclo
+    (`runbook-checkpoint-<slug do e-mail do git>`) — cada operador tem ciclo
     próprio, para que dois não sobrescrevam a tag um do outro;
   - ao atingir o limite, injeta a ordem de rodar o `checkpoint-reviewer`;
   - se a tag sumiu num repo que já usou o fluxo, avisa alto em vez de deixar
@@ -100,7 +100,7 @@ def main():
     slug = (
         re.sub(r"[^a-z0-9]+", "-", email.split("@")[0].lower()).strip("-") or "anon"
     )
-    tag = f"{TAG_BASE}/{slug}"
+    tag = f"{TAG_BASE}-{slug}"
 
     def tem(ref):
         return git("rev-parse", "-q", "--verify", f"refs/tags/{ref}", cwd=raiz) is not None

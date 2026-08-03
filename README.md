@@ -57,7 +57,7 @@ O `run` segue a filosofia *subagent-driven*: um subagent fresco por ticket (cada
 
 ## Multi-operador
 
-A tag de checkpoint é escopada por operador (`runbook-checkpoint/<slug do e-mail do git>`), e o hook conta apenas commits do próprio autor — mais de uma pessoa pode rodar o fluxo no mesmo repo sem sobrescrever o ciclo alheio. Repos que usavam a tag legada sem escopo recebem instrução de migração automaticamente.
+A tag de checkpoint é escopada por operador (`runbook-checkpoint-<slug do e-mail do git>`), e o hook conta apenas commits do próprio autor — mais de uma pessoa pode rodar o fluxo no mesmo repo sem sobrescrever o ciclo alheio. Repos que usavam a tag legada sem escopo recebem instrução de migração automaticamente.
 
 ## Licença
 

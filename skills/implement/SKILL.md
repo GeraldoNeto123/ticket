@@ -116,19 +116,19 @@ O commit da linha acompanha o desfecho: no caso **factual**, ela entra no mesmo 
 
 A contagem é feita pelo hook `runbook-checkpoint.py` (PostToolUse, roda sozinho depois de todo `git commit`) — você não precisa contar. Ele avisa quando o limite de **3** commits de ticket é atingido, e também quando a tag sumiu ou ficou para trás.
 
-A tag do ciclo é **escopada por operador**: `runbook-checkpoint/<slug>`, com o slug derivado da parte local do `git config user.email` (minúsculas, sequências não alfanuméricas viram um `-`). Cada operador tem ciclo próprio e o hook conta só os commits dele — é o que permite mais de uma pessoa rodar o fluxo no mesmo repo sem uma sobrescrever a tag da outra. Os avisos do hook trazem o nome exato da sua tag; use-o como veio (na dúvida, `git tag -l 'runbook-checkpoint/*'` lista as existentes).
+A tag do ciclo é **escopada por operador**: `runbook-checkpoint-<slug>`, com o slug derivado da parte local do `git config user.email` (minúsculas, sequências não alfanuméricas viram um `-`). Cada operador tem ciclo próprio e o hook conta só os commits dele — é o que permite mais de uma pessoa rodar o fluxo no mesmo repo sem uma sobrescrever a tag da outra. Os avisos do hook trazem o nome exato da sua tag; use-o como veio (na dúvida, `git tag -l 'runbook-checkpoint-*'` lista as existentes).
 
 O hook é infraestrutura **da máquina, não do repo** — e ausente, falha em silêncio: o checkpoint simplesmente nunca é pedido. Por isso, ao fim do passo 5, se a sua tag existe e nenhum aviso chegou, confira por conta própria:
 
 ```bash
-git log --oneline --no-merges --author="$(git config user.email)" "runbook-checkpoint/<slug>..HEAD"
+git log --oneline --no-merges --author="$(git config user.email)" "runbook-checkpoint-<slug>..HEAD"
 ```
 
 3+ commits de ticket acumulados sem aviso = hook não instalado nesta máquina. Rode o checkpoint manualmente e avise o usuário para reinstalar o plugin `ticket` — o hook faz parte dele.
 
 O aviso chega no commit do passo 5.1, ainda antes da revisão e do amend. **Termine o passo 5 primeiro** — o checkpoint revisa o acumulado, e o commit deste ticket só está pronto depois do amend.
 
-Ao receber o aviso, dispare o agent `checkpoint-reviewer` passando o intervalo (`runbook-checkpoint/<slug>..HEAD`) e **onde vivem os tickets e o spec** — o diretório, em modo arquivo; o repo/projeto e o CLI de leitura, em modo tracker.
+Ao receber o aviso, dispare o agent `checkpoint-reviewer` passando o intervalo (`runbook-checkpoint-<slug>..HEAD`) e **onde vivem os tickets e o spec** — o diretório, em modo arquivo; o repo/projeto e o CLI de leitura, em modo tracker.
 
 Com o relatório em mãos, correções pequenas viram um único commit `refactor:` seu — com a palavra `checkpoint` na mensagem (ex.: `refactor: checkpoint <sha..sha> — <resumo>`): é por ela que o hook detecta um checkpoint que rodou sem a tag ter sido movida. Achados grandes viram tickets novos — e **abrir ticket tem regra**, senão o tracker vira depósito:
 
@@ -171,11 +171,11 @@ Com o relatório em mãos, correções pequenas viram um único commit `refactor
 Por fim **mova e publique** a tag — as duas coisas, sempre:
 
 ```bash
-git tag -f "runbook-checkpoint/<slug>" && git push -f origin "runbook-checkpoint/<slug>"
+git tag -f "runbook-checkpoint-<slug>" && git push -f origin "runbook-checkpoint-<slug>"
 ```
 
 O `push -f` aqui só alcança a **sua** tag — as dos outros operadores ficam intactas.
 
 Sem o push a tag fica só na máquina: um clone novo não a encontra e o acumulado inteiro passa por revisado sem nunca ter sido revisado. Exceção: repo sem remoto (comum em modo arquivo) — aí só mova a tag; não há para onde publicar e o push falharia.
 
-Se a sua tag não existir, **não a crie em silêncio**. Tente `git fetch origin --tags` primeiro; se ela não estiver no remoto, pergunte ao usuário se deve revisar o acumulado ou recomeçar do HEAD. Caso especial: repo que usava o fluxo antes do escopo por operador tem a tag legada `runbook-checkpoint` sem sufixo — o hook detecta e instrui a migração (`git tag runbook-checkpoint/<slug> runbook-checkpoint`), que preserva o intervalo em vez de descartá-lo.
+Se a sua tag não existir, **não a crie em silêncio**. Tente `git fetch origin --tags` primeiro; se ela não estiver no remoto, pergunte ao usuário se deve revisar o acumulado ou recomeçar do HEAD. Caso especial: repo que usava o fluxo antes do escopo por operador tem a tag legada `runbook-checkpoint` sem sufixo — o hook detecta e instrui a migração (`git tag runbook-checkpoint-<slug> runbook-checkpoint`), que preserva o intervalo em vez de descartá-lo.

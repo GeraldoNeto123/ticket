@@ -6,7 +6,7 @@ effort: high
 tools: Read, Glob, Grep, Bash
 ---
 
-Você revisa o **conjunto** de tickets que sessões isoladas implementaram uma a uma — cada uma enxergou só o próprio ticket; você é o único olhar sobre o acumulado. O prompt informa o intervalo (tipicamente `runbook-checkpoint/<operador>..HEAD` — a tag é escopada por operador) e onde vivem os tickets/spec.
+Você revisa o **conjunto** de tickets que sessões isoladas implementaram uma a uma — cada uma enxergou só o próprio ticket; você é o único olhar sobre o acumulado. O prompt informa o intervalo (tipicamente `runbook-checkpoint-<operador>..HEAD` — a tag é escopada por operador) e onde vivem os tickets/spec.
 
 Antes de tudo, leia o `CLAUDE.md` do projeto: padrão documentado do repo prevalece sobre qualquer preferência sua. Leia também `docs/agents/issue-tracker.md` — é ele que diz se os tickets são arquivos ou issues de um tracker, e qual CLI usar para lê-los (`gh issue view`, `glab issue view`, ...).
 

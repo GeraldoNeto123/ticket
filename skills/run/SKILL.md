@@ -26,9 +26,13 @@ O ledger é seu mapa de recuperação: os SHAs que ele nomeia existem no git mes
 
 ## 3. O loop
 
+Primeiro, resolva o caminho da skill `implement`: ela mora ao lado desta, em `<diretório-base desta skill>/../implement/SKILL.md` (o diretório-base aparece no cabeçalho quando esta skill é invocada). Resolva para caminho absoluto uma vez e reuse em todos os dispatches.
+
+O subagent **lê esse arquivo, não invoca a skill**: `implement` é porta de entrada humana (`disable-model-invocation`) e o Skill tool recusa invocação vinda de modelo — inclusive de subagents. Ler o arquivo entrega as mesmas instruções pelo caminho que a política permite, no padrão task-brief: "leia isto primeiro; são seus requisitos".
+
 Para cada ticket da frontier, despache **um** subagent com um prompt mínimo:
 
-- Invoque a skill `ticket:implement` passando `<referência do ticket>` e `<caminho do spec>`.
+- Leia `<caminho absoluto da implement/SKILL.md>` primeiro e siga-o como suas instruções de trabalho. Onde o arquivo diz `$ARGUMENTS`, vale: ticket `<referência>`, spec em `<caminho do spec>`.
 - Execute o fluxo até o fim do passo 7. **Não execute o passo 8 (checkpoint)** — se o aviso do hook chegar no commit, termine o passo 5 normalmente e inclua `CHECKPOINT_DUE` no retorno.
 - Retorne **apenas** este contrato: `STATUS` (uma das opções abaixo) · SHA do commit (se houver) · resumo dos testes em uma linha · observações em até três linhas. Sem diff, sem histórico, sem narrativa.
 
