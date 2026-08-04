@@ -69,7 +69,9 @@ Se o spec conflitar com a realidade do código, pare e triageie — nunca implem
 
 ## 4. Verificar
 
-Evidência antes de alegação: rode os testes e o typecheck de verdade e confira a saída antes de dizer que está pronto.
+Evidência antes de alegação: rode as verificações de verdade e confira a saída antes de dizer que está pronto. São typecheck, testes e — quando o projeto os configura — lint e checagem de formatação. Descubra os comandos onde o projeto os declara (`package.json`, `Makefile`, `pyproject.toml`, CI) em vez de assumir um stack: projeto sem linter não ganha um aqui, e o comando ausente é resposta, não falha do ticket.
+
+Rode a checagem em modo verificação, nunca em modo correção (`--check`, não `--write`): formatador reescrevendo arquivo no passo 4 mistura mudança de estilo com a do ticket e polui o diff que o passo 5 vai revisar.
 
 ## 5. Commit, revisar, amend
 
@@ -132,12 +134,14 @@ Ao receber o aviso, dispare o agent `checkpoint-reviewer` passando o intervalo (
 
 Com o relatório em mãos, correções pequenas viram um único commit `refactor:` seu — com a palavra `checkpoint` na mensagem (ex.: `refactor: checkpoint <sha..sha> — <resumo>`): é por ela que o hook detecta um checkpoint que rodou sem a tag ter sido movida.
 
-O resto do relatório **nunca entra na fila da feature**. A regra existe por experiência: quando todo achado virava ticket na mesma pasta numerada, a fila crescia mais rápido do que era consumida (13 tickets viraram 39) e o "done" virou alvo móvel. A fila converge para o escopo original; achado fica em quarentena até um humano promovê-lo. Por classe do relatório:
+O resto do relatório **nunca entra na fila da feature**. A regra existe por experiência: quando todo achado virava ticket na mesma pasta numerada, a fila crescia mais rápido do que era consumida (13 tickets viraram 39) e o "done" virou alvo móvel. A fila converge para o escopo original; achado fica em quarentena até um humano promovê-lo.
 
-1. **Defeitos reais** → registro de achado **fora da fila**. Em modo arquivo: um arquivo por achado em `<dir-dos-tickets>/checkpoint/<slug-da-âncora>.md` — subpasta própria, sem número da sequência da feature. Em modo tracker: issue com rótulos `checkpoint` + `needs-triage`. Nos dois modos o status de nascença é **sempre** `needs-triage` — nunca `ready-for-agent`: promover achado a item de fila é decisão humana, via triagem, não sua. Antes de criar, confirme a duplicata você mesmo:
+Em modo arquivo, tudo que o checkpoint produz vive num `checkpoint/` único na **raiz da árvore de tickets** — a pasta que contém as pastas de feature, não a da feature da vez (tickets em `.scratch/<feature>/issues/` → `.scratch/checkpoint/`). Um intervalo de commits atravessa duas features com frequência, e ancorar o registro na feature do HEAD fragmenta a memória e cega o dedup, que passaria a enxergar só a feature atual. Em modo tracker não há pasta: o equivalente é o rótulo `checkpoint`, que já é global no projeto. Por classe do relatório:
+
+1. **Defeitos reais** → registro de achado **fora da fila**. Em modo arquivo: um arquivo por achado em `<raiz-dos-tickets>/checkpoint/<slug-da-âncora>.md` — sem número da sequência da feature. Em modo tracker: issue com rótulos `checkpoint` + `needs-triage`. Nos dois modos o status de nascença é **sempre** `needs-triage` — nunca `ready-for-agent`: promover achado a item de fila é decisão humana, via triagem, não sua. Antes de criar, confirme a duplicata você mesmo:
 
    ```bash
-   grep -ril "<âncora>" <dir-dos-tickets>/checkpoint/          # arquivo
+   grep -ril "<âncora>" <raiz-dos-tickets>/checkpoint/         # arquivo
    gh issue list --search "<âncora>" --state all --limit 20    # GitHub
    glab issue list --search "<âncora>" --all                   # GitLab
    ```
@@ -163,7 +167,9 @@ O resto do relatório **nunca entra na fila da feature**. A regra existe por exp
    Origem: checkpoint-reviewer · intervalo `<sha..sha>`
    ```
 
-2. **Inconsistências sem defeito** → uma linha cada em `<dir-dos-tickets>/checkpoint/registro.md` (crie se não existir). Não abrem arquivo próprio nem issue — são memória para a triagem humana e para o dedup do próximo checkpoint.
+2. **Inconsistências sem defeito** → uma linha cada em `<raiz-dos-tickets>/checkpoint/registro/<sha-curto>..<sha-curto>.md`: **um arquivo por checkpoint**, nomeado pelo intervalo revisado (sem inconsistência nenhuma, não crie o arquivo). Não abrem arquivo de achado nem issue — são memória para a triagem humana e para o dedup do próximo checkpoint, que já as alcança pelo `grep -r` acima.
+
+   Uma entrada dessas sai por **um único motivo: ter virado ticket** — e quem a remove é o humano que a promoveu na triagem, nunca você e nunca o checkpoint seguinte. Não há expiração por idade, por volume nem por "parecer obsoleta": entrada antiga que ninguém resolveu é precisamente o que o registro existe para manter à vista. Encontrar entradas repetidas de checkpoints anteriores é o funcionamento esperado, não sujeira a limpar. O rastro sobrevive do outro lado — o ticket promovido carrega a origem do achado.
 
 3. **Propostas de processo** → reporte ao usuário no encerramento, textualmente. Mudam a skill ou o agent, nunca viram ticket do projeto — achado meta que vira ticket é o fluxo gerando trabalho sobre a própria burocracia.
 

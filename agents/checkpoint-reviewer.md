@@ -39,7 +39,7 @@ Antes de reportar, classifique cada achado. Este portão existe por experiência
    - **Âncora de busca** — um termo exato e greppável: código de erro (`23505`), símbolo (`isUniqueViolation`), nome de constraint. É a identidade durável do achado — permite reencontrá-lo depois, mesmo descrito com outras palavras. Sem âncora, o achado não é acionável.
    - **Onde** — arquivo por ocorrência, apontando o símbolo ou citando o trecho — **não número de linha**: a linha envelhece antes de o achado ser lido; a âncora, não.
    - **Por que nenhum ticket isolado viu** — a justificativa de ter vindo do checkpoint.
-   - **Já existe?** — busque a âncora nos achados anteriores: a subpasta `checkpoint/` dos tickets em modo arquivo (`grep -ril`), as issues abertas **e fechadas** em modo tracker (`gh issue list --search "<âncora>" --state all --limit 20`). Se encontrar, diga `já existe como <ref>` em vez de propor título novo — intervalos que se sobrepõem reencontram a mesma coisa, e duplicata é o modo de falha mais comum aqui.
+   - **Já existe?** — busque a âncora nos achados anteriores: o `checkpoint/` na raiz da árvore de tickets em modo arquivo (`grep -ril`, recursivo — alcança também os registros de checkpoints anteriores), as issues abertas **e fechadas** em modo tracker (`gh issue list --search "<âncora>" --state all --limit 20`). Se encontrar, diga `já existe como <ref>` em vez de propor título novo — intervalos que se sobrepõem reencontram a mesma coisa, e duplicata é o modo de falha mais comum aqui.
 
 3. **Inconsistências sem defeito** — uma linha cada: o padrão divergente e onde. Vão para o registro do checkpoint, nunca para a fila.
 

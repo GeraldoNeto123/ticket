@@ -53,7 +53,7 @@ O `run` segue a filosofia *subagent-driven*: um subagent fresco por ticket (cada
 5. **Commit → review → amend** — a revisão só enxerga trabalho commitado; 1 ticket = 1 commit. Push é manual, fora do fluxo.
 6. **Encerrar** — *feito* ≠ *fechado*: quem fecha issue é o merge, não o push.
 7. **Métrica** — cada erro de spec vira uma linha versionada em `spec-errors.md`.
-8. **Checkpoint** — a cada 5 tickets, o agent revisa o acumulado com um portão de materialidade: correções pequenas viram um `refactor:`; defeitos reais viram achados em quarentena (`issues/checkpoint/`, sempre `needs-triage` — promover à fila é decisão humana); inconsistências sem defeito viram linha de registro; achados sobre o próprio processo viram proposta de mudança na skill, nunca ticket. A fila da feature converge para o escopo original.
+8. **Checkpoint** — a cada 5 tickets, o agent revisa o acumulado com um portão de materialidade: correções pequenas viram um `refactor:`; defeitos reais viram achados em quarentena (`checkpoint/` na raiz da árvore de tickets, sempre `needs-triage` — promover à fila é decisão humana); inconsistências sem defeito viram linha num registro por checkpoint, que só sai de lá quando vira ticket; achados sobre o próprio processo viram proposta de mudança na skill, nunca ticket. A fila da feature converge para o escopo original.
 
 ## Multi-operador
 
