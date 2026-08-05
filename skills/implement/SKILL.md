@@ -116,73 +116,22 @@ O commit da linha acompanha o desfecho: no caso **factual**, ela entra no mesmo 
 
 ## 8. Checkpoint de consistência
 
-A contagem é feita pelo hook `runbook-checkpoint.py` (PostToolUse, roda sozinho depois de todo `git commit`) — você não precisa contar. Ele avisa quando o limite de **5** commits de ticket é atingido, e também quando a tag sumiu ou ficou para trás.
+**Se um orquestrador `/ticket:run` despachou você, este passo não é seu.** Termine o passo 7, inclua `CHECKPOINT_DUE` no seu retorno caso o aviso do hook tenha chegado, e pare por aí. O checkpoint pertence a quem enxerga a fila inteira — e subagent não despacha agent, então tentar aqui não falha com erro, falha em silêncio.
 
-A tag do ciclo é **escopada por operador**: `runbook-checkpoint-<slug>`, com o slug derivado da parte local do `git config user.email` (minúsculas, sequências não alfanuméricas viram um `-`). Cada operador tem ciclo próprio e o hook conta só os commits dele — é o que permite mais de uma pessoa rodar o fluxo no mesmo repo sem uma sobrescrever a tag da outra. Os avisos do hook trazem o nome exato da sua tag; use-o como veio (na dúvida, `git tag -l 'runbook-checkpoint-*'` lista as existentes).
+A contagem é feita pelo hook `runbook-checkpoint.py` (PostToolUse, roda sozinho depois de todo `git commit`) — você não precisa contar. Ele avisa quando o limite de **5** commits de ticket é atingido, e também quando a tag do ciclo está ausente, legada ou ficou para trás. Os avisos trazem o nome exato da sua tag e o comando a rodar; use-os como vieram (na dúvida, `git tag -l 'runbook-checkpoint*'` lista as existentes).
 
-O hook é infraestrutura **da máquina, não do repo** — e ausente, falha em silêncio: o checkpoint simplesmente nunca é pedido. Por isso, ao fim do passo 5, se a sua tag existe e nenhum aviso chegou, confira por conta própria:
+A tag do ciclo é **escopada por operador**: `runbook-checkpoint-<slug>`, com o slug derivado da parte local do `git config user.email` (minúsculas, sequências não alfanuméricas viram um `-`). Cada operador tem ciclo próprio e o hook conta só os commits dele — é o que permite mais de uma pessoa rodar o fluxo no mesmo repo sem uma sobrescrever a tag da outra.
+
+**Confira por conta própria.** O hook é infraestrutura da máquina, não do repo — e ausente, falha em silêncio: o checkpoint simplesmente nunca é pedido. Por isso, ao fim do passo 5, se nenhum aviso chegou:
 
 ```bash
-git log --oneline --no-merges --author="$(git config user.email)" "runbook-checkpoint-<slug>..HEAD"
+git log --oneline --no-merges --author="$(git config user.email)" \
+  -E --invert-grep --grep='^(docs|chore|refactor|ci|style|test)[(:]' \
+  "runbook-checkpoint-<slug>..HEAD"
 ```
 
-3+ commits de ticket acumulados sem aviso = hook não instalado nesta máquina. Rode o checkpoint manualmente e avise o usuário para reinstalar o plugin `ticket` — o hook faz parte dele.
+O filtro e o limiar acompanham os do hook de propósito — conferência que conta diferente do contador acusa problema onde não há. **5 linhas ou mais sem nenhum aviso ter chegado** = hook não instalado nesta máquina: rode o checkpoint manualmente e avise o usuário para reinstalar o plugin `ticket`, que é de onde o hook vem. Se o comando falhar dizendo que a revisão não existe, é a tag que falta — o ciclo nunca foi aberto, e o caso está tratado no arquivo de referência abaixo.
 
 O aviso chega no commit do passo 5.1, ainda antes da revisão e do amend. **Termine o passo 5 primeiro** — o checkpoint revisa o acumulado, e o commit deste ticket só está pronto depois do amend.
 
-Ao receber o aviso, dispare o agent `checkpoint-reviewer` passando o intervalo (`runbook-checkpoint-<slug>..HEAD`) e **onde vivem os tickets e o spec** — o diretório, em modo arquivo; o repo/projeto e o CLI de leitura, em modo tracker.
-
-Com o relatório em mãos, correções pequenas viram um único commit `refactor:` seu — com a palavra `checkpoint` na mensagem (ex.: `refactor: checkpoint <sha..sha> — <resumo>`): é por ela que o hook detecta um checkpoint que rodou sem a tag ter sido movida.
-
-O resto do relatório **nunca entra na fila da feature**. A regra existe por experiência: quando todo achado virava ticket na mesma pasta numerada, a fila crescia mais rápido do que era consumida (13 tickets viraram 39) e o "done" virou alvo móvel. A fila converge para o escopo original; achado fica em quarentena até um humano promovê-lo.
-
-Em modo arquivo, tudo que o checkpoint produz vive num `checkpoint/` único na **raiz da árvore de tickets** — a pasta que contém as pastas de feature, não a da feature da vez (tickets em `.scratch/<feature>/issues/` → `.scratch/checkpoint/`). Um intervalo de commits atravessa duas features com frequência, e ancorar o registro na feature do HEAD fragmenta a memória e cega o dedup, que passaria a enxergar só a feature atual. Em modo tracker não há pasta: o equivalente é o rótulo `checkpoint`, que já é global no projeto. Por classe do relatório:
-
-1. **Defeitos reais** → registro de achado **fora da fila**. Em modo arquivo: um arquivo por achado em `<raiz-dos-tickets>/checkpoint/<slug-da-âncora>.md` — sem número da sequência da feature. Em modo tracker: issue com rótulos `checkpoint` + `needs-triage`. Nos dois modos o status de nascença é **sempre** `needs-triage` — nunca `ready-for-agent`: promover achado a item de fila é decisão humana, via triagem, não sua. Antes de criar, confirme a duplicata você mesmo:
-
-   ```bash
-   grep -ril "<âncora>" <raiz-dos-tickets>/checkpoint/         # arquivo
-   gh issue list --search "<âncora>" --state all --limit 20    # GitHub
-   glab issue list --search "<âncora>" --all                   # GitLab
-   ```
-
-   Se já existe: acrescente ao registro existente o que o novo checkpoint adiciona e **não crie outro**. Corpo mínimo de cada achado:
-
-   ```markdown
-   ## Achado
-   <uma frase: o defeito, do ponto de vista de quem sofre o efeito>
-
-   ## Onde
-   <arquivo por ocorrência, apontando símbolo ou trecho — sem número de linha, que envelhece>
-
-   ## Por que nenhum ticket isolado viu
-   <a justificativa de ter vindo do checkpoint>
-
-   ## Âncora de busca
-   `<termo exato: código de erro, símbolo, constraint>`
-
-   **Status:** needs-triage
-
-   ---
-   Origem: checkpoint-reviewer · intervalo `<sha..sha>`
-   ```
-
-2. **Inconsistências sem defeito** → uma linha cada em `<raiz-dos-tickets>/checkpoint/registro/<sha-curto>..<sha-curto>.md`: **um arquivo por checkpoint**, nomeado pelo intervalo revisado (sem inconsistência nenhuma, não crie o arquivo). Não abrem arquivo de achado nem issue — são memória para a triagem humana e para o dedup do próximo checkpoint, que já as alcança pelo `grep -r` acima.
-
-   Uma entrada dessas sai por **um único motivo: ter virado ticket** — e quem a remove é o humano que a promoveu na triagem, nunca você e nunca o checkpoint seguinte. Não há expiração por idade, por volume nem por "parecer obsoleta": entrada antiga que ninguém resolveu é precisamente o que o registro existe para manter à vista. Encontrar entradas repetidas de checkpoints anteriores é o funcionamento esperado, não sujeira a limpar. O rastro sobrevive do outro lado — o ticket promovido carrega a origem do achado.
-
-3. **Propostas de processo** → reporte ao usuário no encerramento, textualmente. Mudam a skill ou o agent, nunca viram ticket do projeto — achado meta que vira ticket é o fluxo gerando trabalho sobre a própria burocracia.
-
-4. **Respeite o que é issue e o que não é.** Se o `issue-tracker.md` do projeto separa issue (unidade de trabalho) de spec/plano/ADR (documento), um achado que é documento vai para `docs/`, não para o tracker.
-
-Por fim **mova e publique** a tag — as duas coisas, sempre:
-
-```bash
-git tag -f "runbook-checkpoint-<slug>" && git push -f origin "runbook-checkpoint-<slug>"
-```
-
-O `push -f` aqui só alcança a **sua** tag — as dos outros operadores ficam intactas.
-
-Sem o push a tag fica só na máquina: um clone novo não a encontra e o acumulado inteiro passa por revisado sem nunca ter sido revisado. Exceção: repo sem remoto (comum em modo arquivo) — aí só mova a tag; não há para onde publicar e o push falharia.
-
-Se a sua tag não existir, **não a crie em silêncio**. Tente `git fetch origin --tags` primeiro; se ela não estiver no remoto, pergunte ao usuário se deve revisar o acumulado ou recomeçar do HEAD. Caso especial: repo que usava o fluxo antes do escopo por operador tem a tag legada `runbook-checkpoint` sem sufixo — o hook detecta e instrui a migração (`git tag runbook-checkpoint-<slug> runbook-checkpoint`), que preserva o intervalo em vez de descartá-lo.
+**O procedimento vive em `references/checkpoint.md`, no diretório desta skill — leia-o quando o checkpoint vencer.** Ele cobre o disparo do agent, o que fazer com cada uma das quatro classes do relatório, onde os achados ficam em quarentena e como fechar o ciclo movendo a tag. Está fora daqui porque roda uma vez a cada cinco tickets: nas outras quatro, seria contexto carregado à toa.
