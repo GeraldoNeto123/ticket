@@ -42,29 +42,62 @@ crescia mais rápido do que era consumida (13 tickets viraram 39) e o "done" vir
 alvo móvel. A fila converge para o escopo original; achado fica em quarentena até
 um humano promovê-lo.
 
-Em modo arquivo, tudo que o checkpoint produz vive num `checkpoint/` único na
-**raiz da árvore de tickets** — a pasta que contém as pastas de feature, não a da
-feature da vez (tickets em `.scratch/<feature>/issues/` → `.scratch/checkpoint/`).
-Um intervalo de commits atravessa duas features com frequência, e ancorar o
-registro na feature do HEAD fragmenta a memória e cega o dedup, que passaria a
-enxergar só a feature atual. Em modo tracker não há pasta: o equivalente é o
-rótulo `checkpoint`, que já é global no projeto.
+Tudo que o checkpoint produz vive **na demanda de onde veio**, num contêiner
+separado da fila. Os dois modos têm a mesma forma — pasta da feature ↔ issue pai,
+arquivo ↔ comentário:
 
-Cada defeito real vira um registro: em modo arquivo, um arquivo por achado em
-`<raiz-dos-tickets>/checkpoint/<slug-da-âncora>.md` — sem número da sequência da
-feature; em modo tracker, uma issue com os rótulos `checkpoint` + `needs-triage`.
+- **Modo arquivo:** `.scratch/<feature>/checkpoint/` — irmã de `issues/`, não
+  dentro dela. Um arquivo por achado, `<slug-da-âncora>.md`, sem número da
+  sequência da feature: numeração é da fila, e achado não é fila.
+- **Modo tracker:** um **comentário na issue pai** da demanda, com os rótulos
+  `checkpoint` + `needs-triage` aplicados **ao pai** (é por eles que a busca do
+  dedup acha os contêineres). Achado não abre issue: nasce `needs-triage` e boa
+  parte morre em `wontfix`, então abrir issue na detecção enche board, relatório
+  e métrica de sprint com trabalho que ninguém decidiu que existe. A issue nasce
+  na **promoção**, quando um humano decidiu.
+
+Escopar por demanda é o que permite mais de um dev no mesmo repo: features
+diferentes escrevem em pastas diferentes e cada um tria o que é seu. Um contêiner
+único no projeto colocaria todo mundo no mesmo arquivo — e o ciclo do checkpoint
+já é escopado por operador, então o contêiner global desfaria uma partição que o
+resto do fluxo mantém.
+
+**Onde o achado mora e onde o dedup procura são coisas diferentes** — não confunda
+uma com a outra. O achado mora na demanda; a busca do passo seguinte varre
+**todas** as demandas. É essa separação que dá escopo sem perder memória: um
+intervalo de commits atravessa duas features com frequência, e o dedup que
+enxergasse só a feature da vez reabriria o mesmo achado a cada lote.
+
+**Se a demanda não tem issue pai, pare e pergunte.** O `/to-tickets` trata o
+`## Parent` como opcional, então o caso é real. Não crie o pai por conta própria:
+inventar estrutura no tracker de alguém é surpresa, e a decisão de como a demanda
+se organiza é do usuário, não do checkpoint. Reporte os achados no encerramento
+para não perdê-los enquanto ele decide.
 
 Nos dois modos o status de nascença é **sempre** `needs-triage` — nunca
 `ready-for-agent`: promover achado a item de fila é decisão humana, via triagem,
 não sua.
 
-Antes de criar, confirme a duplicata você mesmo:
+Antes de criar, confirme a duplicata você mesmo — sempre sobre **todos** os
+contêineres, nunca só o da demanda da vez:
 
 ```bash
-grep -ril "<âncora>" <raiz-dos-tickets>/checkpoint/         # arquivo
-gh issue list --search "<âncora>" --state all --limit 20    # GitHub
-glab issue list --search "<âncora>" --all                   # GitLab
+# arquivo — o glob atravessa as features; sem ele, o dedup cega
+grep -ril "<âncora>" .scratch/*/checkpoint/
+
+# tracker — os pais rotulados são os contêineres; leia os comentários de cada um
+gh issue list   --label checkpoint --state all --json number --jq '.[].number'
+glab issue list --label checkpoint --all
+# depois, por pai:
+gh issue view <n> --comments | grep -i "<âncora>"
+glab issue view <n> --comments | grep -i "<âncora>"
 ```
+
+Duas etapas em vez de uma busca só porque **nenhum dos dois CLIs procura dentro de
+comentário**: o `--search` do `glab` cobre apenas título e descrição, e o do `gh`
+depende de qualificador de busca que nem sempre alcança. Listar os pais pelo
+rótulo e ler os comentários é determinístico e funciona igual nas duas
+plataformas.
 
 Se já existe: acrescente ao registro existente o que o novo checkpoint adiciona e
 **não crie outro**. Corpo mínimo de cada achado:
@@ -90,12 +123,16 @@ Origem: checkpoint-reviewer · intervalo `<sha..sha>`
 
 ## 4. Inconsistências sem defeito → registro
 
-Uma linha cada em
-`<raiz-dos-tickets>/checkpoint/registro/<sha-curto>..<sha-curto>.md`: **um arquivo
-por checkpoint**, nomeado pelo intervalo revisado (sem inconsistência nenhuma, não
-crie o arquivo). Não abrem arquivo de achado nem issue — são memória para a
-triagem humana e para o dedup do próximo checkpoint, que já as alcança pelo
-`grep -r` acima.
+Uma linha cada, no mesmo contêiner da demanda e **agrupadas por intervalo**:
+
+- **Modo arquivo:** `.scratch/<feature>/checkpoint/registro/<sha-curto>..<sha-curto>.md`
+  — um arquivo por checkpoint, nomeado pelo intervalo revisado.
+- **Modo tracker:** um comentário na issue pai, um por checkpoint, com o intervalo
+  no cabeçalho.
+
+Sem inconsistência nenhuma, não crie nada. Não abrem arquivo de achado nem issue —
+são memória para a triagem humana e para o dedup do próximo checkpoint, que já as
+alcança pelas buscas acima.
 
 Uma entrada dessas sai por **um único motivo: ter virado ticket** — e quem a
 remove é o humano que a promoveu na triagem, nunca você e nunca o checkpoint

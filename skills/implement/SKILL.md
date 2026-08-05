@@ -50,6 +50,8 @@ Três casos, e só um deles segue em frente:
 
 Antes de escrever código, leia os ADRs e o glossário do projeto — na convenção destas skills o glossário é o `CONTEXT.md` na raiz, e os ADRs ficam em `docs/adr/` se o projeto não documentar outro lugar. Cada sessão começa limpa e não viu os tickets anteriores — o que atravessa o `/clear` são esses registros. Decisão já tomada ali não se reabre aqui; se o ticket contradiz um ADR, isso é conflito de spec (passo 3).
 
+**Referência de linha no ticket é pista, não endereço.** O ticket foi escrito quando o split olhou o código, e todo ticket implementado desde então empurrou as linhas do arquivo — `src/pedido.ts:212` costuma apontar para outra coisa quando você chega. Localize pelo símbolo ou pelo trecho citado; se o número ainda bate, foi atalho, mas quem manda é o alvo descrito. Editar o que está naquela linha *agora*, só porque o ticket cita o número, é o modo de falha real aqui — o diff sai plausível e erra de lugar. Se o alvo não existe em lugar nenhum (símbolo renomeado, arquivo dividido, código já removido), isso não é ticket difícil: é o spec descrevendo um código que mudou, e o passo 3 trata.
+
 Implemente restrito ao escopo deste ticket:
 
 - Use `/tdd` nas costuras pré-acordadas — elas vêm do spec/preâmbulo, onde o `/to-spec` as registrou. Se o spec não nomeia costura nenhuma, isso é lacuna de spec: trate pelo passo 3 em vez de deixar o `/tdd` parar o fluxo para perguntar ao usuário.
