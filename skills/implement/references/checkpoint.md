@@ -123,7 +123,7 @@ Origem: checkpoint-reviewer · intervalo `<sha..sha>`
 
 ## 4. Inconsistências sem defeito → registro
 
-Uma linha cada, no mesmo contêiner da demanda e **agrupadas por intervalo**:
+Uma linha cada, no mesmo contêiner da demanda e **agrupadas por intervalo**. Vale aqui a mesma regra de endereço do achado: símbolo ou trecho, nunca `arquivo:linha` — o registro é o artefato de vida mais longa do fluxo, porque só sai quando alguém o promove, e portanto é onde a linha tem mais tempo para deixar de corresponder.
 
 - **Modo arquivo:** `.scratch/<feature>/checkpoint/registro/<sha-curto>..<sha-curto>.md`
   — um arquivo por checkpoint, nomeado pelo intervalo revisado.

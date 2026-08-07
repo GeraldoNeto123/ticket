@@ -10,6 +10,7 @@ Plugin do Claude Code com o fluxo **`/ticket:implement`**: implementação disci
 | Skill `run` | Orquestrador da fila: `/ticket:run <spec/feature>` executa os tickets da frontier em sequência, um subagent fresco por ticket, com ledger de progresso e escalada explícita |
 | Agent `checkpoint-reviewer` | Revisão de consistência **entre** tickets acumulados (Opus, effort high) — o olhar que nenhuma sessão isolada tem |
 | Hook `runbook-checkpoint.py` | PostToolUse em todo `git commit`: abre o primeiro ciclo, conta os commits de ticket do operador e avisa quando o checkpoint vence. Registrado automaticamente na instalação do plugin |
+| Hook `referencias-de-linha.py` | PostToolUse em todo `Write`/`Edit` de `.md`: acusa documento que nasce com âncora `arquivo:linha`, que envelhece a cada ticket. Aviso, não bloqueio; silencioso fora dos repos que usam o fluxo |
 
 ## Pré-requisitos
 
