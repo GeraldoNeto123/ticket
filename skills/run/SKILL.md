@@ -33,10 +33,14 @@ Primeiro, resolva o caminho da skill `implement`: ela mora ao lado desta, em `<d
 Se sumiu, **não tente re-resolver pelo diretório-base que veio no cabeçalho** — ele aponta para a mesma pasta podada e está tão morto quanto. Ache a versão nova por fora do plugin:
 
 ```bash
-ls -d ~/.claude/plugins/cache/ticket/ticket/*/skills/implement/SKILL.md | tail -1
-# se o cache tiver mais de uma versão, o manifesto desempata:
-python3 -c "import json,os;d=json.load(open(os.path.expanduser('~/.claude/plugins/installed_plugins.json')));print(d['plugins']['ticket@ticket'][0]['installPath'])"
+# rota primária: o manifesto diz exatamente qual versão está instalada
+python3 -c "import json,os;d=json.load(open(os.path.expanduser('~/.claude/plugins/installed_plugins.json')));print(d['plugins']['ticket@ticket'][0]['installPath']+'/skills/implement/SKILL.md')"
+
+# se o manifesto não abrir, o cache desempata — com `sort -V`, nunca `tail -1` puro
+ls -d ~/.claude/plugins/cache/ticket/ticket/*/skills/implement/SKILL.md | sort -V | tail -1
 ```
+
+O `sort -V` não é preciosismo: em ordem alfabética `1.10.1` vem **antes** de `1.9.0`, então `ls | tail -1` devolve a versão velha com cara de resposta certa — e o resto da fila roda contra instruções desatualizadas sem nada acusar.
 
 Achou: siga com o caminho novo e anote no ledger que a versão trocou no meio da fila. Não achou: pare e pergunte, em vez de despachar sem instruções.
 
