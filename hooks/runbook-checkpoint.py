@@ -18,7 +18,14 @@ skill `/ticket:implement` pedia, só que fora do alcance do esquecimento do mode
     vez de cancelá-lo;
   - detecta o caso de um checkpoint que rodou sem a tag ter sido movida.
 
-Silencioso em qualquer repo que não use o fluxo.
+Silencioso em qualquer repo que não use o fluxo, e em qualquer sessão que não
+tenha invocado `/ticket:implement` ou `/ticket:run`.
+
+A tag é **local, nunca publicada**. Ela é um marcador de progresso pessoal —
+escopado ao operador — e não descreve nada do projeto, então ninguém mais tem
+uso para ela. Publicá-la, e ainda por cima reescrevê-la com `push -f` a cada
+ciclo, fazia o `git fetch` dos outros desenvolvedores recusar com "would
+clobber existing tag": custo real para o time, benefício zero.
 """
 
 import json
@@ -30,6 +37,25 @@ import sys
 TAG_BASE = "runbook-checkpoint"
 LIMITE = 5
 REGISTRO = os.path.expanduser("~/.claude/state/runbook-checkpoint-repos")
+
+# Só a sessão que de fato entrou no fluxo recebe o aviso. Antes o hook avisava
+# toda sessão que commitasse e delegava ao modelo a decisão de ignorar, o que
+# transformava o checkpoint em ruído de fundo em sessão de triagem, de review,
+# de correção avulsa — e ruído recorrente é ruído que se aprende a ignorar.
+#
+# O discriminador é a **invocação**, não a menção: uma sessão que conversa
+# sobre o fluxo não é o fluxo.
+#
+# Por isso a checagem é estrutural, e não textual. Procurar a string
+# `"skill":"ticket:implement"` no transcript cru parece bastar e não basta: a
+# própria sessão que mantém este hook escreve esses literais na conversa e
+# passa a se declarar sessão do fluxo. Foi o que aconteceu no primeiro teste
+# desta função. Só contam, então:
+#   - bloco `tool_use` da ferramenta Skill cujo `input.skill` é do fluxo;
+#   - `<command-name>` dentro de mensagem do **usuário** — texto que o assistente
+#     escreve não conta, e é lá que a menção mora.
+FLUXO = {"ticket:implement", "ticket:run"}
+COMANDO_DE_BARRA = re.compile(r"<command-name>/?ticket:(implement|run)</command-name>")
 
 # Marcador de que o repo adotou o fluxo, independente de já existir tag. É o
 # arquivo que a skill lê antes de tudo para saber onde vivem os tickets; sem
@@ -58,15 +84,64 @@ NAO_CONTA = re.compile(r"^[0-9a-f]+\s+(docs|chore|refactor|ci|style|test)[(:]", 
 # achados, docs sobre o fluxo — não fecham ciclo nenhum.
 CHECKPOINT = re.compile(r"^[0-9a-f]+\s+refactor(\([^)]*\))?:\s*checkpoint\b", re.I)
 
-# Rodapé repetido em todo aviso: o hook não sabe se a sessão que commitou é a
-# do fluxo, e agir por engano é pior do que não agir.
+# Rodapé repetido em todo aviso. O caso "sessão que não é do fluxo" saiu daqui
+# porque o hook agora filtra por invocação e essa sessão nem chega a ver o
+# aviso. Sobra o subagent: ele roda dentro do fluxo, então casa o filtro, mas o
+# checkpoint pertence ao orquestrador.
 FORA_DO_FLUXO = (
-    "Se esta sessão NÃO está executando o fluxo /ticket:implement, não toque na "
-    "tag nem rode o checkpoint: apenas informe o usuário e siga — o aviso "
-    "reaparecerá no próximo commit da sessão do fluxo.\n"
     "Se você é um subagent despachado por uma fila /ticket:run, o checkpoint "
-    "também não é seu: devolva `CHECKPOINT_DUE` ao orquestrador e siga."
+    "não é seu: devolva `CHECKPOINT_DUE` ao orquestrador e siga."
 )
+
+
+def sessao_do_fluxo(entrada):
+    """A sessão que commitou invocou /ticket:implement ou /ticket:run?
+
+    Na dúvida devolve False: avisar quem não pediu é o defeito que este filtro
+    existe para corrigir. Um falso negativo custa um ciclo de atraso — o aviso
+    volta no próximo commit da sessão certa.
+    """
+    caminho = entrada.get("transcript_path")
+    if not caminho:
+        return False
+    try:
+        with open(caminho, encoding="utf-8", errors="replace") as f:
+            for linha in f:
+                try:
+                    registro = json.loads(linha)
+                except (json.JSONDecodeError, ValueError):
+                    continue
+                mensagem = registro.get("message")
+                if not isinstance(mensagem, dict):
+                    continue
+                papel = mensagem.get("role")
+                conteudo = mensagem.get("content")
+
+                # Mensagem do usuário vem como string quando é um comando de
+                # barra — que é justamente o caso que interessa aqui.
+                if papel == "user" and isinstance(conteudo, str):
+                    if COMANDO_DE_BARRA.search(conteudo):
+                        return True
+                    continue
+
+                if not isinstance(conteudo, list):
+                    continue
+                for bloco in conteudo:
+                    if not isinstance(bloco, dict):
+                        continue
+                    if papel == "assistant" and bloco.get("name") == "Skill":
+                        entrada_skill = bloco.get("input")
+                        if (
+                            isinstance(entrada_skill, dict)
+                            and entrada_skill.get("skill") in FLUXO
+                        ):
+                            return True
+                    elif papel == "user" and bloco.get("type") == "text":
+                        if COMANDO_DE_BARRA.search(bloco.get("text") or ""):
+                            return True
+    except OSError:
+        return False
+    return False
 
 
 def git(*args, cwd):
@@ -126,6 +201,9 @@ def main():
     if not COMMIT.search(comando):
         return
 
+    if not sessao_do_fluxo(entrada):
+        return
+
     cwd = entrada.get("cwd") or os.getcwd()
     raiz = git("rev-parse", "--show-toplevel", cwd=cwd)
     if not raiz:
@@ -165,7 +243,7 @@ def main():
         avisos.append(
             f"Este repo ainda usa a tag legada `{TAG_BASE}` (sem escopo de operador). "
             f"Migre preservando o intervalo acumulado:\n"
-            f"    git tag {tag} {TAG_BASE} && git push origin {tag}\n"
+            f"    git tag {tag} {TAG_BASE}\n"
             f"A legada pode ser apagada quando todos os operadores migrarem. "
             f"Até lá a contagem abaixo usa `{TAG_BASE}` como base."
         )
@@ -180,21 +258,21 @@ def main():
                 f"A tag `{tag}` não existe neste repo, mas ele já usou o fluxo "
                 f"/ticket:implement antes. Isso normalmente significa clone novo, outra "
                 f"máquina ou tag apagada — e NÃO que o acumulado foi revisado.\n\n"
-                f"Não recrie a tag em silêncio. Primeiro tente recuperá-la do remoto "
-                f"(`git fetch origin --tags`). Se ela não existir lá, pare e pergunte "
-                f"ao usuário se deve rodar o `checkpoint-reviewer` sobre o acumulado "
-                f"ou recomeçar do HEAD.",
+                f"Não recrie a tag em silêncio: pare e pergunte ao usuário se deve "
+                f"rodar o `checkpoint-reviewer` sobre o acumulado ou recomeçar do "
+                f"HEAD. A tag é local e nunca é publicada, então não há remoto de "
+                f"onde recuperá-la — clone novo começa ciclo do zero por desenho.",
                 FORA_DO_FLUXO,
             )
         avisar(
             f"Este repo tem `{MARCADOR}` (adotou o fluxo /ticket:implement) mas ainda "
             f"não tem a tag de checkpoint `{tag}` — então nenhum ciclo está aberto e "
             f"o checkpoint nunca vai vencer. Abra o primeiro ciclo agora:\n"
-            f"    git tag {tag} && git push origin {tag}\n"
+            f"    git tag {tag}\n"
             f"A tag ancora no HEAD: o ciclo passa a contar deste commit em diante, e "
             f"o que veio antes fica de fora. Se houver trabalho anterior que nunca "
             f"passou por checkpoint, pergunte ao usuário se a âncora deve recuar. "
-            f"Repo sem remoto: só crie a tag; não há para onde publicar.",
+            f"A tag é local: não a publique.",
             FORA_DO_FLUXO,
         )
 
@@ -225,7 +303,7 @@ def main():
             f"não foi movida — o ciclo do passo 8 ficou pela metade. Confirme com "
             f"`git log --oneline {base}..HEAD` e, se o checkpoint de fato já rodou, "
             f"feche o ciclo agora:\n"
-            f"    git tag -f {tag} && git push -f origin {tag}"
+            f"    git tag -f {tag}"
         )
 
     if n >= LIMITE:
@@ -236,7 +314,7 @@ def main():
             f"`{base}..HEAD` e o diretório dos tickets.\n"
             f"2. Correções pequenas viram um único commit `refactor:`; defeitos "
             f"reais viram achados em quarentena, fora da fila.\n"
-            f"3. Mova e publique a tag: `git tag -f {tag} && git push -f origin {tag}`"
+            f"3. Mova a tag (local, não publique): `git tag -f {tag}`"
         )
 
     if avisos:

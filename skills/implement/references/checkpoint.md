@@ -154,19 +154,23 @@ Se o `issue-tracker.md` do projeto separa issue (unidade de trabalho) de
 spec/plano/ADR (documento), um achado que é documento vai para `docs/`, não para o
 tracker.
 
-## 7. Fechar o ciclo: mover e publicar a tag
+## 7. Fechar o ciclo: mover a tag
 
-As duas coisas, sempre:
+Local, sempre. **Nunca publique:**
 
 ```bash
-git tag -f "runbook-checkpoint-<slug>" && git push -f origin "runbook-checkpoint-<slug>"
+git tag -f "runbook-checkpoint-<slug>"
 ```
 
-O `push -f` aqui só alcança a **sua** tag — as dos outros operadores ficam
-intactas.
+A tag é um marcador de progresso pessoal, escopado ao seu e-mail. Ela não
+descreve nada do projeto e nenhum outro desenvolvedor tem uso para ela.
+Publicá-la — e reescrevê-la com `push -f` a cada ciclo — faz o `git fetch` dos
+outros recusar com *"would clobber existing tag"*. Custo real para o time,
+benefício zero.
 
-Sem o push a tag fica só na máquina: um clone novo não a encontra e o acumulado
-inteiro passa por revisado sem nunca ter sido revisado.
+A contrapartida, aceita de propósito: clone novo ou outra máquina começa o
+ciclo do zero, porque não há remoto de onde recuperar a tag. Quando isso
+acontecer, o hook avisa e pergunta em vez de descartar o acumulado em silêncio.
 
 Dois casos em que o push não acontece, e nenhum deles é motivo para insistir:
 
@@ -193,5 +197,5 @@ legada `runbook-checkpoint` sem sufixo. O hook segue contando por ela e instrui 
 migração, que preserva o intervalo em vez de descartá-lo:
 
 ```bash
-git tag runbook-checkpoint-<slug> runbook-checkpoint && git push origin runbook-checkpoint-<slug>
+git tag runbook-checkpoint-<slug> runbook-checkpoint
 ```
