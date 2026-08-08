@@ -6,6 +6,8 @@ Plugin do Claude Code com o fluxo **`/ticket:implement`**: implementação disci
 
 | Componente | O que faz |
 |---|---|
+| Skill `spec` | `/ticket:spec` — segue o `to-spec` do `mattpocock-skills` e acrescenta o que este fluxo consome depois: costuras registradas de forma que uma sessão nova ache, e referência de código por símbolo |
+| Skill `split` | `/ticket:split <spec>` — roda o portão de modelagem (campo → escritores por fluxo, conflito vira ADR) e só então segue o `to-tickets`, com o ADR como entrada |
 | Skill `implement` | O fluxo em 8 passos, invocado com `/ticket:implement <ticket>` |
 | Skill `run` | Orquestrador da fila: `/ticket:run <spec/feature>` executa os tickets da frontier em sequência, um subagent fresco por ticket, com ledger de progresso e escalada explícita |
 | Agent `checkpoint-reviewer` | Revisão de consistência **entre** tickets acumulados (Opus, effort high) — o olhar que nenhuma sessão isolada tem |
@@ -14,7 +16,7 @@ Plugin do Claude Code com o fluxo **`/ticket:implement`**: implementação disci
 
 ## Pré-requisitos
 
-1. **Plugin `mattpocock-skills`** — o `/tdd` e o `code-review` do fluxo vêm dele:
+1. **Plugin `mattpocock-skills`** — o `/tdd`, o `code-review`, o `domain-modeling` e os `to-spec`/`to-tickets` que as skills `spec` e `split` envolvem vêm dele:
 
    ```
    /plugin marketplace add mattpocock/skills
@@ -39,13 +41,21 @@ Plugin do Claude Code com o fluxo **`/ticket:implement`**: implementação disci
 Reinicie a sessão (ou `/reload-plugins`) e invoque:
 
 ```
+/ticket:spec                                               # a conversa vira spec
+/ticket:split <spec>                                       # portão de modelagem e então a fila de tickets
 /ticket:implement <número da issue ou caminho do ticket>   # um ticket, modo assistido
 /ticket:run <spec/feature>                                 # a fila inteira, modo autônomo
 ```
 
+As duas primeiras **envolvem** o `to-spec` e o `to-tickets` do `mattpocock-skills` em vez de duplicá-los: leem o `SKILL.md` de lá (os dois são `disable-model-invocation`, e o Skill tool recusa invocação vinda de modelo) e acrescentam o que só quem conhece o resto do fluxo sabe — o portão de modelagem antes do fatiamento, o ADR como entrada dos tickets, a issue pai que o checkpoint vai precisar, e referência de código por símbolo. O upstream segue se atualizando sem merge; em troca, as duas conferem se o arquivo lido ainda tem a forma que os adendos pressupõem e param se não tiver. O `scripts/upstream-skill.py` resolve o caminho da cópia instalada, que carrega a versão e por isso não pode ser fixado.
+
 O `run` segue a filosofia *subagent-driven*: um subagent fresco por ticket (cada um foi dimensionado para uma janela limpa), estritamente sequencial — tickets são fatias verticais e colidem nos arquivos de junção, então paralelismo de implementação fica de fora por design. O orquestrador mantém um ledger de progresso, roda o checkpoint quando o hook avisa e para apenas nos casos que exigem decisão humana (erro de spec de design, bloqueio).
 
 ## O fluxo, em uma linha por passo
+
+Antes da fila existir: **`/ticket:spec`** sintetiza a conversa em spec, e **`/ticket:split`** roda o portão de modelagem — mapa de campo → escritores por fluxo, conflito virando ADR — antes de fatiar. O portão existe porque fatiar por comportamento visível é a fatia certa para entregar valor e mesmo assim deixa passar o conflito de escritor: numa etapa real de 64 tickets, sete tinham essa forma, e nenhum foi falha de implementação — cada um passou na própria revisão. Ele tem critério de entrada: etapa que não escreve em estado compartilhado por mais de um fluxo pula o portão e diz isso.
+
+Depois, por ticket:
 
 1. **Reivindicar** — bloqueadores primeiro (frontier), depois dono; ticket de outra pessoa para o fluxo.
 2. **Implementar** — escopo restrito ao ticket, `/tdd` nas costuras que o spec registrou.
