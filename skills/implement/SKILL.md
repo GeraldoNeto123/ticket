@@ -50,6 +50,13 @@ Três casos, e só um deles segue em frente:
 
 Antes de escrever código, leia os ADRs e o glossário do projeto — na convenção destas skills o glossário é o `CONTEXT.md` na raiz, e os ADRs ficam em `docs/adr/` se o projeto não documentar outro lugar. Cada sessão começa limpa e não viu os tickets anteriores — o que atravessa o `/clear` são esses registros. Decisão já tomada ali não se reabre aqui; se o ticket contradiz um ADR, isso é conflito de spec (passo 3).
 
+**Se este ticket acrescentar um escritor a um campo que um ADR governa, o ADR não pode ficar como estava.** Ler não basta: leitura não produz a linha que o próximo ticket precisa encontrar, e o próximo ticket é uma sessão limpa que só tem o documento. O caso cai nos dois do passo 3, sem protocolo novo:
+
+- O escritor novo **obedece** à regra já decidida — quem ganha no conflito, o que cada um faz quando não sabe o valor: acrescentá-lo à lista do ADR é correção **factual**. Vai no mesmo commit `docs:`, e o ticket segue.
+- O escritor novo **não cabe** na regra — pede outro critério de desempate, ou o caso "não sabe" não estava previsto: isso é **design**. Registre no ticket, pare e escale.
+
+O portão do `/ticket:split` enumerou os escritores antes de a fila existir; um ticket que cria escritor sem devolver essa informação ao ADR desfaz o portão um passo adiante, e o defeito reaparece no checkpoint, caro.
+
 **Referência de linha no ticket é pista, não endereço.** O ticket foi escrito quando o split olhou o código, e todo ticket implementado desde então empurrou as linhas do arquivo — `src/pedido.ts:212` costuma apontar para outra coisa quando você chega. Localize pelo símbolo ou pelo trecho citado; se o número ainda bate, foi atalho, mas quem manda é o alvo descrito. Editar o que está naquela linha *agora*, só porque o ticket cita o número, é o modo de falha real aqui — o diff sai plausível e erra de lugar. Se o alvo não existe em lugar nenhum (símbolo renomeado, arquivo dividido, código já removido), isso não é ticket difícil: é o spec descrevendo um código que mudou, e o passo 3 trata.
 
 Implemente restrito ao escopo deste ticket:
@@ -74,6 +81,8 @@ Se o spec conflitar com a realidade do código, pare e triageie — nunca implem
 Evidência antes de alegação: rode as verificações de verdade e confira a saída antes de dizer que está pronto. São typecheck, testes e — quando o projeto os configura — lint e checagem de formatação. Descubra os comandos onde o projeto os declara (`package.json`, `Makefile`, `pyproject.toml`, CI) em vez de assumir um stack: projeto sem linter não ganha um aqui, e o comando ausente é resposta, não falha do ticket.
 
 Rode a checagem em modo verificação, nunca em modo correção (`--check`, não `--write`): formatador reescrevendo arquivo no passo 4 mistura mudança de estilo com a do ticket e polui o diff que o passo 5 vai revisar.
+
+**Critério de aceite que afirma algo sobre *todos* os caminhos** — "sempre", "nenhum", "em qualquer fluxo" — não se verifica pelo ramo que você editou. Suíte verde prova que o caminho testado funciona, não que os outros obedecem. Enumere os caminhos e diga o que viu em cada um; se um ADR mapeia os escritores daquele campo, ele já é a lista, e o `grep` pelo nome do campo fecha o que faltar. Sem a enumeração, não marque `[x]`: marcar invariante por amostragem é a forma mais barata de transformar uma suposição em fato conhecido, e o próximo ticket vai construir em cima dela.
 
 ## 5. Commit, revisar, amend
 

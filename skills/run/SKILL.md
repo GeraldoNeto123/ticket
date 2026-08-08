@@ -28,13 +28,13 @@ Ele é memória de **execução**, não conhecimento do projeto — os fatos dur
 
 ## 3. O loop
 
-Primeiro, resolva o caminho da skill `implement`: ela mora ao lado desta, em `<diretório-base desta skill>/../implement/SKILL.md` (o diretório-base aparece no cabeçalho quando esta skill é invocada). Resolva para caminho absoluto uma vez e reuse em todos os dispatches.
+Primeiro, resolva o caminho da skill `implement`: ela mora ao lado desta, em `<diretório-base desta skill>/../implement/SKILL.md` (o diretório-base aparece no cabeçalho quando esta skill é invocada). Resolva para caminho absoluto uma vez e reuse em todos os dispatches — **conferindo antes de cada um que o arquivo ainda existe** (`test -f`). O caminho carrega a versão do plugin (`.../ticket/1.9.0/skills/...`), e um `plugin update` no meio da fila poda o diretório da versão antiga: o caminho que você resolveu no primeiro ticket morre sem aviso, e os dispatches seguintes mandam o subagent ler um arquivo que não está mais lá. Já aconteceu. Se sumiu, resolva de novo a partir do diretório-base desta skill — que também se moveu — e siga; se ainda assim não achar, pare e pergunte, em vez de despachar sem instruções.
 
 O subagent **lê esse arquivo, não invoca a skill**: `implement` é porta de entrada humana (`disable-model-invocation`) e o Skill tool recusa invocação vinda de modelo — inclusive de subagents. Ler o arquivo entrega as mesmas instruções pelo caminho que a política permite, no padrão task-brief: "leia isto primeiro; são seus requisitos".
 
 Para cada ticket da frontier, despache **um** subagent com um prompt mínimo:
 
-- Leia `<caminho absoluto da implement/SKILL.md>` primeiro e siga-o como suas instruções de trabalho. Onde o arquivo diz `$ARGUMENTS`, vale: ticket `<referência>`, spec em `<caminho do spec>`.
+- Leia `<caminho absoluto da implement/SKILL.md>` primeiro e siga-o como suas instruções de trabalho. Onde o arquivo diz `$ARGUMENTS`, vale: ticket `<referência>`, spec em `<caminho do spec>`. **Se o arquivo não existir, devolva `BLOCKED` dizendo exatamente isso e não implemente nada** — sem ele você não tem os requisitos, e um ticket implementado de memória é pior do que um ticket não implementado.
 - Execute o fluxo até o fim do passo 7. **Não execute o passo 8 (checkpoint)** — se o aviso do hook chegar no commit, termine o passo 5 normalmente e inclua `CHECKPOINT_DUE` no retorno.
 - Retorne **apenas** este contrato: `STATUS` (uma das opções abaixo) · SHA do commit (se houver) · resumo dos testes em uma linha · observações em até três linhas. Sem diff, sem histórico, sem narrativa.
 
