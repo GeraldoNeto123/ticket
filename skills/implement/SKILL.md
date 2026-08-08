@@ -55,6 +55,11 @@ Antes de escrever código, leia os ADRs e o glossário do projeto — na conven�
 - O escritor novo **obedece** à regra já decidida — quem ganha no conflito, o que cada um faz quando não sabe o valor: acrescentá-lo à lista do ADR é correção **factual**. Vai no mesmo commit `docs:`, e o ticket segue.
 - O escritor novo **não cabe** na regra — pede outro critério de desempate, ou o caso "não sabe" não estava previsto: isso é **design**. Registre no ticket, pare e escale.
 
+Duas ressalvas, porque o roteamento para o passo 3 traz junto duas regras que **não** valem aqui:
+
+- **ADR sempre commita, inclusive em tracker.** A regra de editar o corpo da issue vale para o spec, que o `/to-spec` publica lá; o ADR mora em `docs/adr/` do repositório nos dois modos, então a correção é sempre um `docs:`.
+- **Só o caso de design entra na métrica do passo 7.** Escritor que obedece à regra é evolução normal do código e não diz nada sobre a qualidade do spec — contá-lo infla o `spec-errors.md` com trabalho saudável. Escritor que exige critério novo é o portão de modelagem tendo saído incompleto, que é exatamente o que a métrica existe para medir.
+
 O portão do `/ticket:split` enumerou os escritores antes de a fila existir; um ticket que cria escritor sem devolver essa informação ao ADR desfaz o portão um passo adiante, e o defeito reaparece no checkpoint, caro.
 
 **Referência de linha no ticket é pista, não endereço.** O ticket foi escrito quando o split olhou o código, e todo ticket implementado desde então empurrou as linhas do arquivo — `src/pedido.ts:212` costuma apontar para outra coisa quando você chega. Localize pelo símbolo ou pelo trecho citado; se o número ainda bate, foi atalho, mas quem manda é o alvo descrito. Editar o que está naquela linha *agora*, só porque o ticket cita o número, é o modo de falha real aqui — o diff sai plausível e erra de lugar. Se o alvo não existe em lugar nenhum (símbolo renomeado, arquivo dividido, código já removido), isso não é ticket difícil: é o spec descrevendo um código que mudou, e o passo 3 trata.
@@ -82,7 +87,7 @@ Evidência antes de alegação: rode as verificações de verdade e confira a sa
 
 Rode a checagem em modo verificação, nunca em modo correção (`--check`, não `--write`): formatador reescrevendo arquivo no passo 4 mistura mudança de estilo com a do ticket e polui o diff que o passo 5 vai revisar.
 
-**Critério de aceite que afirma algo sobre *todos* os caminhos** — "sempre", "nenhum", "em qualquer fluxo" — não se verifica pelo ramo que você editou. Suíte verde prova que o caminho testado funciona, não que os outros obedecem. Enumere os caminhos e diga o que viu em cada um; se um ADR mapeia os escritores daquele campo, ele já é a lista, e o `grep` pelo nome do campo fecha o que faltar. Sem a enumeração, não marque `[x]`: marcar invariante por amostragem é a forma mais barata de transformar uma suposição em fato conhecido, e o próximo ticket vai construir em cima dela.
+**Critério de aceite que afirma algo sobre um conjunto que você não enumerou** não se verifica pelo ramo que você editou. O teste é esse — o conjunto —, e ele tem duas formas que enganam por parecerem opostas: *todos* os membros obedecem ("sempre", "nenhum", "em qualquer fluxo") ou existe *um só* ("uma política só", "um único escritor", "o único formato"). As duas afirmam a mesma coisa sobre o conjunto inteiro, e nenhuma se verifica olhando o membro que você mexeu. Suíte verde prova que o caminho testado funciona, não que os outros obedecem. Enumere os caminhos e diga o que viu em cada um; se um ADR mapeia os escritores daquele campo, ele já é a lista, e o `grep` pelo nome do campo fecha o que faltar. Sem a enumeração, não marque `[x]`: marcar invariante por amostragem é a forma mais barata de transformar uma suposição em fato conhecido, e o próximo ticket vai construir em cima dela.
 
 ## 5. Commit, revisar, amend
 

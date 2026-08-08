@@ -28,7 +28,17 @@ Ele é memória de **execução**, não conhecimento do projeto — os fatos dur
 
 ## 3. O loop
 
-Primeiro, resolva o caminho da skill `implement`: ela mora ao lado desta, em `<diretório-base desta skill>/../implement/SKILL.md` (o diretório-base aparece no cabeçalho quando esta skill é invocada). Resolva para caminho absoluto uma vez e reuse em todos os dispatches — **conferindo antes de cada um que o arquivo ainda existe** (`test -f`). O caminho carrega a versão do plugin (`.../ticket/1.9.0/skills/...`), e um `plugin update` no meio da fila poda o diretório da versão antiga: o caminho que você resolveu no primeiro ticket morre sem aviso, e os dispatches seguintes mandam o subagent ler um arquivo que não está mais lá. Já aconteceu. Se sumiu, resolva de novo a partir do diretório-base desta skill — que também se moveu — e siga; se ainda assim não achar, pare e pergunte, em vez de despachar sem instruções.
+Primeiro, resolva o caminho da skill `implement`: ela mora ao lado desta, em `<diretório-base desta skill>/../implement/SKILL.md` (o diretório-base aparece no cabeçalho quando esta skill é invocada). Resolva para caminho absoluto uma vez e reuse em todos os dispatches — **conferindo antes de cada um que o arquivo ainda existe** (`test -f`). O caminho carrega a versão do plugin (`.../ticket/<versão>/skills/...`), e um `plugin update` no meio da fila poda o diretório da versão antiga: o caminho que você resolveu no primeiro ticket morre sem aviso, e os dispatches seguintes mandam o subagent ler um arquivo que não está mais lá. Já aconteceu.
+
+Se sumiu, **não tente re-resolver pelo diretório-base que veio no cabeçalho** — ele aponta para a mesma pasta podada e está tão morto quanto. Ache a versão nova por fora do plugin:
+
+```bash
+ls -d ~/.claude/plugins/cache/ticket/ticket/*/skills/implement/SKILL.md | tail -1
+# se o cache tiver mais de uma versão, o manifesto desempata:
+python3 -c "import json,os;d=json.load(open(os.path.expanduser('~/.claude/plugins/installed_plugins.json')));print(d['plugins']['ticket@ticket'][0]['installPath'])"
+```
+
+Achou: siga com o caminho novo e anote no ledger que a versão trocou no meio da fila. Não achou: pare e pergunte, em vez de despachar sem instruções.
 
 O subagent **lê esse arquivo, não invoca a skill**: `implement` é porta de entrada humana (`disable-model-invocation`) e o Skill tool recusa invocação vinda de modelo — inclusive de subagents. Ler o arquivo entrega as mesmas instruções pelo caminho que a política permite, no padrão task-brief: "leia isto primeiro; são seus requisitos".
 
