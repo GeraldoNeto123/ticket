@@ -24,6 +24,15 @@ Antes do primeiro dispatch, crie `.scratch/ticket-run/<slug-da-feature>.md` com 
 
 O ledger é seu mapa de recuperação: os SHAs que ele nomeia existem no git mesmo quando seu contexto já não lembra deles. Se esta sessão for compactada no meio da fila, o ledger é o que permite retomar sem reexecutar nada.
 
+**Se o ledger já existe, esta fila está sendo retomada — e retomar não é recomeçar.** Uma sessão que morre no meio de um ticket deixa um estado que nenhum retorno de subagent descreveu: o commit pode existir sem o ticket estar `done`, o `Assignee` pode ter sido escrito e não commitado. Antes do primeiro dispatch, cruze três fontes para cada ticket da frontier — a linha do ledger, o `git log` do intervalo e o `Status:` do próprio ticket. Quatro desfechos:
+
+- **Sem commit e sem `done`** — execução normal, dispatch como sempre.
+- **Com commit e sem `done`** — **retomada**. O trabalho existe; reimplementá-lo produz um segundo commit do mesmo ticket e joga fora o primeiro. O dispatch precisa dizer isso na primeira linha: *não reimplemente; o commit `<sha>` já entrega este ticket; confira-o, retome do passo em que parou e use `<sha>^` como ponto fixo da revisão do passo 5*. Sem o ponto fixo explícito, a revisão do subagent diffa contra o lugar errado e passa em branco.
+- **`done`** — sai da frontier, não vira dispatch.
+- **Ambíguo** — o commit toca mais do que o ticket, há mais de um commit para ele, ou não existe ledger porque a sessão morreu antes de criá-lo: **pare e pergunte.** Aqui é onde menos se sabe o que aconteceu com o repositório, e portanto a pior hora para adivinhar. Marcar como `done` um ticket cuja revisão nunca rodou custa tanto quanto reimplementar por cima.
+
+Reconciliado, registre no ledger o que você concluiu de cada um antes de despachar — a reconciliação também é trabalho que se perde se a sessão cair de novo.
+
 Ele é memória de **execução**, não conhecimento do projeto — os fatos duráveis já vivem no git e nos tickets — portanto **não é versionado**. Garanta isso antes de criá-lo: se `git check-ignore .scratch/ticket-run` falhar, acrescente `.scratch/ticket-run/` ao `.git/info/exclude` (ignore local do clone; não use `.gitignore`, que geraria um commit de ruído no repo).
 
 ## 3. O loop

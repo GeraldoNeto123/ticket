@@ -78,11 +78,29 @@ COMMIT = re.compile(
 )
 
 # Prefixos que o próprio fluxo gera e que não contam como ticket.
-NAO_CONTA = re.compile(r"^[0-9a-f]+\s+(docs|chore|refactor|ci|style|test)[(:]", re.I)
+#
+# `refactor` saiu daqui de propósito: filtrar por tipo confunde papel com
+# rótulo, e um ticket cuja entrega legítima é uma renomeação commita como
+# `refactor(escopo): ...` e ficava invisível — uma fila de renomeações nunca
+# disparava checkpoint. O `/ticket:split` gera fatias assim por desenho, então
+# o caso não é raro. O que continua fora são os dois papéis do próprio fluxo,
+# ambos reconhecidos por marcador abaixo, não por tipo.
+#
+# `test` e `style` seguem excluídos por tipo, e isso é aproximação assumida: se
+# um dia um ticket entregar só testes, o mesmo problema volta com outra letra.
+# Sem evidência de que aconteça, mexer aqui seria repetir como o filtro chegou
+# ao estado que este comentário conserta.
+NAO_CONTA = re.compile(r"^[0-9a-f]+\s+(docs|chore|ci|style|test)[(:]", re.I)
 # Só o formato canônico do passo 8 (`refactor: checkpoint <sha..sha> — ...`)
 # é um checkpoint. Commits que apenas mencionam a palavra — triagem de
 # achados, docs sobre o fluxo — não fecham ciclo nenhum.
 CHECKPOINT = re.compile(r"^[0-9a-f]+\s+refactor(\([^)]*\))?:\s*checkpoint\b", re.I)
+# O commit de exceção do passo 5: os achados da revisão aplicados fora do
+# `--amend`, quando o commit do ticket já subiu. Ele é o *mesmo* ticket, então
+# contá-lo de novo faria o ciclo fechar cedo. O marcador exigido pelo passo 5
+# (`achados de <sha>`) é o que o distingue — a mesma solução da palavra
+# `checkpoint`, e resistente a colisão de um jeito que "revisão" não seria.
+REVISAO = re.compile(r"\bachados de [0-9a-f]{7,40}\b", re.I)
 
 # Rodapé repetido em todo aviso. O caso "sessão que não é do fluxo" saiu daqui
 # porque o hook agora filtra por invocação e essa sessão nem chega a ver o
@@ -294,7 +312,13 @@ def main():
         avisar(*avisos)  # a contagem falhou, mas o que já se sabe não se perde
     linhas = [l for l in log.splitlines() if l.strip()]
 
-    tickets = [l for l in linhas if not NAO_CONTA.search(l)]
+    tickets = [
+        l
+        for l in linhas
+        if not NAO_CONTA.search(l)
+        and not CHECKPOINT.search(l)
+        and not REVISAO.search(l)
+    ]
     n = len(tickets)
 
     if any(CHECKPOINT.search(l) for l in linhas):

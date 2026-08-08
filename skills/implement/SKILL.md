@@ -99,6 +99,14 @@ Nesta ordem — a revisão vem **depois** do commit, não antes:
    - `git log -1` — o amend acerta o HEAD, não o commit que você tem em mente.
    - O commit ainda não subiu. O push da branch é **manual e fora desta skill**, mas nada impede o operador de ter pushado no meio: se `git log @{u}..HEAD` vier vazio, o commit já está no upstream e amendar reescreveria histórico publicado — aplique os achados num commit novo e registre a exceção à regra de 1 commit. Sem upstream configurado não houve push; amend seguro.
 
+     Esse commit de exceção leva **`achados de <sha-curto>`** no assunto, com o sha do commit revisado:
+
+     ```
+     refactor(escopo): achados de 9d281b74 — <resumo>
+     ```
+
+     O marcador não é enfeite: o contador do passo 8 conta commits, não tickets, e sem ele este commit passaria por um segundo ticket e fecharia o ciclo cedo. É o mesmo papel da palavra `checkpoint` no commit do passo 8 — e `achados de <sha>` ainda diz *qual* commit foi revisado, o que a palavra sozinha não diria.
+
 A ordem importa: o `code-review` diffa `<ponto-fixo>...HEAD`, então só enxerga trabalho **commitado**. Invocado antes do commit ele não tem ponto fixo válido e revisa o commit anterior ou nada — sem erro visível, com relatório de aparência normal.
 
 Commits `docs:` do passo 3 e `refactor:` do passo 8 são exceções à regra de um commit por ticket.
@@ -142,7 +150,10 @@ A tag do ciclo é **escopada por operador**: `runbook-checkpoint-<slug>`, com o 
 
 ```bash
 git log --oneline --no-merges --author="$(git config user.email)" \
-  -E --invert-grep --grep='^(docs|chore|refactor|ci|style|test)[(:]' \
+  -E --invert-grep \
+  --grep='^(docs|chore|ci|style|test)[(:]' \
+  --grep='^refactor(\([^)]*\))?: *checkpoint' \
+  --grep='achados de [0-9a-f]{7,40}' \
   "runbook-checkpoint-<slug>..HEAD"
 ```
 
