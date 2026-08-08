@@ -42,6 +42,8 @@ Se sim, rode a passada. **Invoque a skill `mattpocock-skills:domain-modeling`** 
 
 O `domain-modeling` traz de graça o confronto com o glossário e a atualização do `CONTEXT.md` — que é justamente o que falta quando dois tickets inventam dois nomes para o mesmo fato. Deixe-o fazer isso; o que é seu aqui é a disciplina acima: o que mapear, o que vira ADR, e quando parar.
 
+**Termo condenado tem que sair do código, ou não devia ter sido condenado.** O formato do glossário manda escolher um vencedor e listar os perdedores em `_Avoid_`, e não pergunta se o perdedor é como o código chama a coisa hoje. Antes de fechar a passada, procure no `src/` cada termo que você acabou de pôr em `_Avoid_`: se ele nomeia símbolo público vivo, o vocabulário não está resolvido — está dividido. Duas saídas, e nenhuma delas é o silêncio: ou o código migra, e a renomeação vira ticket desta fatia com o cuidado de raio de alcance que o `to-tickets` descreve para refatoração ampla; ou o `_Avoid_` estava errado, e quem ganha é o nome que o código já usa. Deixar como está custa duas vezes: o glossário passa a mentir, e o `checkpoint-reviewer`, que lê o glossário, reporta como divergência de naming um conflito que o documento criou.
+
 **Pare no ADR.** O portão decide e registra; ele não implementa nem abre ticket.
 
 ## 3. Fatiar
