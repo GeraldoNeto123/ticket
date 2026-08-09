@@ -62,15 +62,14 @@ Duas ressalvas, porque o roteamento para o passo 3 traz junto duas regras que **
 
 O portão do `/ticket:split` enumerou os escritores antes de a fila existir; um ticket que cria escritor sem devolver essa informação ao ADR desfaz o portão um passo adiante, e o defeito reaparece no checkpoint, caro.
 
-**Referência de linha no ticket é pista, não endereço.** O ticket foi escrito quando o split olhou o código, e todo ticket implementado desde então empurrou as linhas do arquivo — `src/pedido.ts:212` costuma apontar para outra coisa quando você chega. Localize pelo símbolo ou pelo trecho citado; se o número ainda bate, foi atalho, mas quem manda é o alvo descrito. Editar o que está naquela linha *agora*, só porque o ticket cita o número, é o modo de falha real aqui — o diff sai plausível e erra de lugar. Se o alvo não existe em lugar nenhum (símbolo renomeado, arquivo dividido, código já removido), isso não é ticket difícil: é o spec descrevendo um código que mudou, e o passo 3 trata.
+**Número de linha no ticket é pista; a âncora é o símbolo ou o trecho descrito.** Localize pelo alvo descrito — mesmo quando o número ainda bate, quem manda é a âncora. Se o alvo não existe em lugar nenhum (símbolo renomeado, arquivo dividido, código já removido), isso não é ticket difícil: é o spec descrevendo um código que mudou, e o passo 3 trata.
 
 Implemente restrito ao escopo deste ticket:
 
 - Use `/tdd` nas costuras pré-acordadas — elas vêm do spec/preâmbulo, onde o `/to-spec` as registrou. Se o spec não nomeia costura nenhuma, isso é lacuna de spec: trate pelo passo 3 em vez de deixar o `/tdd` parar o fluxo para perguntar ao usuário.
-- Rode typecheck e os testes do arquivo com frequência durante o trabalho.
-- Rode a suite completa uma vez ao final.
+- Enquanto trabalha, rode **só** typecheck e os testes do arquivo que você está mexendo. A suíte completa pertence ao passo 4 e roda **uma vez por ticket**: rodá-la aqui também dobra a parte mais cara da fila sem descobrir nada que o passo 4 não descubra.
 
-**Não commite aqui.** O commit é o passo 5, depois da verificação e do protocolo de erro de spec.
+O commit é o passo 5, depois da verificação e do protocolo de erro de spec.
 
 ## 3. Protocolo de erro de spec
 
@@ -140,25 +139,10 @@ O commit da linha acompanha o desfecho: no caso **factual**, ela entra no mesmo 
 
 ## 8. Checkpoint de consistência
 
-**Se um orquestrador `/ticket:run` despachou você, este passo não é seu.** Termine o passo 7, inclua `CHECKPOINT_DUE` no seu retorno caso o aviso do hook tenha chegado, e pare por aí. O checkpoint pertence a quem enxerga a fila inteira — e subagent não despacha agent, então tentar aqui não falha com erro, falha em silêncio.
+**Despachado por um `/ticket:run`?** Este passo não é seu: termine o passo 7, inclua `CHECKPOINT_DUE` no retorno caso o aviso do hook tenha chegado, e pare aí. O checkpoint pertence a quem enxerga a fila inteira — e subagent não despacha agent, então tentar aqui não falha com erro, falha em silêncio.
 
-A contagem é feita pelo hook `runbook-checkpoint.py` (PostToolUse, roda sozinho depois de todo `git commit`) — você não precisa contar. Ele avisa quando o limite de **5** commits de ticket é atingido, e também quando a tag do ciclo está ausente, legada ou ficou para trás. Os avisos trazem o nome exato da sua tag e o comando a rodar; use-os como vieram (na dúvida, `git tag -l 'runbook-checkpoint*'` lista as existentes).
-
-A tag do ciclo é **escopada por operador**: `runbook-checkpoint-<slug>`, com o slug derivado da parte local do `git config user.email` (minúsculas, sequências não alfanuméricas viram um `-`). Cada operador tem ciclo próprio e o hook conta só os commits dele — é o que permite mais de uma pessoa rodar o fluxo no mesmo repo sem uma sobrescrever a tag da outra.
-
-**Confira por conta própria.** O hook é infraestrutura da máquina, não do repo — e ausente, falha em silêncio: o checkpoint simplesmente nunca é pedido. Por isso, ao fim do passo 5, se nenhum aviso chegou:
-
-```bash
-git log --oneline --no-merges --author="$(git config user.email)" \
-  -E --invert-grep \
-  --grep='^(docs|chore|ci|style|test)[(:]' \
-  --grep='^refactor(\([^)]*\))?: *checkpoint' \
-  --grep='achados de [0-9a-f]{7,40}' \
-  "runbook-checkpoint-<slug>..HEAD"
-```
-
-O filtro e o limiar acompanham os do hook de propósito — conferência que conta diferente do contador acusa problema onde não há. **5 linhas ou mais sem nenhum aviso ter chegado** = hook não instalado nesta máquina: rode o checkpoint manualmente e avise o usuário para reinstalar o plugin `ticket`, que é de onde o hook vem. Se o comando falhar dizendo que a revisão não existe, é a tag que falta — o ciclo nunca foi aberto, e o caso está tratado no arquivo de referência abaixo.
+Em sessão manual, quem conta é o hook `runbook-checkpoint.py` (PostToolUse, roda sozinho depois de todo `git commit`): ele avisa quando o ciclo de **5** commits de ticket vence, e traz o nome exato da sua tag e o comando a rodar — use-os como vieram.
 
 O aviso chega no commit do passo 5.1, ainda antes da revisão e do amend. **Termine o passo 5 primeiro** — o checkpoint revisa o acumulado, e o commit deste ticket só está pronto depois do amend.
 
-**O procedimento vive em `references/checkpoint.md`, no diretório desta skill — leia-o quando o checkpoint vencer.** Ele cobre o disparo do agent, o que fazer com cada uma das quatro classes do relatório, onde os achados ficam em quarentena e como fechar o ciclo movendo a tag. Está fora daqui porque roda uma vez a cada cinco tickets: nas outras quatro, seria contexto carregado à toa.
+**O procedimento vive em `references/checkpoint.md`, no diretório desta skill — leia-o quando o checkpoint vencer.** Ele cobre o ciclo escopado por operador, a conferência de que o hook está mesmo instalado, o disparo do agent, o destino de cada classe do relatório e o fechamento do ciclo. Está fora daqui porque roda uma vez a cada cinco tickets: nas outras quatro, seria contexto carregado à toa.

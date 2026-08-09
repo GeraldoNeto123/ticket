@@ -9,6 +9,38 @@ Antes de qualquer coisa, confirme que o passo 5 terminou. O aviso chega no commi
 do passo 5.1, ainda antes da revisão e do amend, e o checkpoint revisa o
 acumulado — que só está completo quando o commit deste ticket está.
 
+## O ciclo, e conferir que o hook existe
+
+A tag do ciclo é **escopada por operador**: `runbook-checkpoint-<slug>`, com o
+slug derivado da parte local do `git config user.email` (minúsculas, sequências
+não alfanuméricas viram um `-`). Cada operador tem ciclo próprio e o hook conta
+só os commits dele — é o que permite mais de uma pessoa rodar o fluxo no mesmo
+repo sem uma sobrescrever a tag da outra. Na dúvida sobre o nome,
+`git tag -l 'runbook-checkpoint*'` lista as existentes.
+
+O hook é infraestrutura da **máquina**, não do repo, e ausente ele falha em
+silêncio: o checkpoint simplesmente nunca é pedido. Numa sessão manual, se você
+chegou ao fim de um passo 5 e nenhum aviso apareceu, confira por conta própria:
+
+```bash
+git log --oneline --no-merges --author="$(git config user.email)" \
+  -E --invert-grep \
+  --grep='^(docs|chore|ci|style|test)[(:]' \
+  --grep='^refactor(\([^)]*\))?: *checkpoint' \
+  --grep='achados de [0-9a-f]{7,40}' \
+  "runbook-checkpoint-<slug>..HEAD"
+```
+
+O filtro e o limiar acompanham os do hook de propósito — conferência que conta
+diferente do contador acusa problema onde não há. **5 linhas ou mais sem nenhum
+aviso ter chegado** = hook não instalado nesta máquina: rode o checkpoint agora
+e avise o usuário para reinstalar o plugin `ticket`, que é de onde o hook vem.
+Se o comando falhar dizendo que a revisão não existe, é a tag que falta — o
+ciclo nunca foi aberto, e o §8 trata.
+
+Num `/ticket:run` a contagem é do orquestrador, pelo ledger, e não depende deste
+comando nem do aviso.
+
 ## 1. Disparar a revisão
 
 Dispare o agent `checkpoint-reviewer` passando três coisas:
@@ -49,11 +81,9 @@ exceções à regra de um commit por ticket.
 
 ## 3. Defeitos reais → achado **fora da fila**
 
-O resto do relatório **nunca entra na fila da feature**. A regra existe por
-experiência: quando todo achado virava ticket na mesma pasta numerada, a fila
-crescia mais rápido do que era consumida (13 tickets viraram 39) e o "done" virou
-alvo móvel. A fila converge para o escopo original; achado fica em quarentena até
-um humano promovê-lo.
+O resto do relatório **nunca entra na fila da feature**. Achado fica em
+quarentena até um humano promovê-lo, e a fila converge para o escopo original —
+sem isso ela cresce mais rápido do que é consumida e o "done" vira alvo móvel.
 
 Tudo que o checkpoint produz vive **na demanda de onde veio**, num contêiner
 separado da fila. Os dois modos têm a mesma forma — pasta da feature ↔ issue pai,
@@ -64,22 +94,16 @@ arquivo ↔ comentário:
   sequência da feature: numeração é da fila, e achado não é fila.
 - **Modo tracker:** um **comentário na issue pai** da demanda, com os rótulos
   `checkpoint` + `needs-triage` aplicados **ao pai** (é por eles que a busca do
-  dedup acha os contêineres). Achado não abre issue: nasce `needs-triage` e boa
-  parte morre em `wontfix`, então abrir issue na detecção enche board, relatório
-  e métrica de sprint com trabalho que ninguém decidiu que existe. A issue nasce
-  na **promoção**, quando um humano decidiu.
+  dedup acha os contêineres). Achado não abre issue — ela nasce na **promoção**,
+  quando um humano decidiu; abri-la na detecção enche board, relatório e métrica
+  de sprint com trabalho que ninguém decidiu que existe.
 
-Escopar por demanda é o que permite mais de um dev no mesmo repo: features
-diferentes escrevem em pastas diferentes e cada um tria o que é seu. Um contêiner
-único no projeto colocaria todo mundo no mesmo arquivo — e o ciclo do checkpoint
-já é escopado por operador, então o contêiner global desfaria uma partição que o
-resto do fluxo mantém.
-
-**Onde o achado mora e onde o dedup procura são coisas diferentes** — não confunda
-uma com a outra. O achado mora na demanda; a busca do passo seguinte varre
-**todas** as demandas. É essa separação que dá escopo sem perder memória: um
-intervalo de commits atravessa duas features com frequência, e o dedup que
-enxergasse só a feature da vez reabriria o mesmo achado a cada lote.
+**Onde o achado mora e onde o dedup procura são coisas diferentes.** O achado mora
+na demanda — é o que permite mais de um dev no mesmo repo, cada um triando o que é
+seu, na mesma partição por operador que o ciclo já usa. A busca do passo seguinte
+varre **todas** as demandas: um intervalo de commits atravessa duas features com
+frequência, e o dedup que enxergasse só a feature da vez reabriria o mesmo achado
+a cada lote.
 
 **Se a demanda não tem issue pai, pare e pergunte.** O `/to-tickets` trata o
 `## Parent` como opcional, então o caso é real. Não crie o pai por conta própria:
@@ -111,18 +135,13 @@ Todo o resto morre `wontfix` **no ato da triagem**, e a entrada permanece onde
 está.
 
 O teste (2) é o que separa estrutura de gosto, e é por ele que a âncora precisa
-ser exata: recorrência é contagem, não impressão. Na etapa 6 ele teria promovido
-"decide pela cópia pré-lock" (4 recorrências) e "escritor apaga campo que não
-conhece" (2, em colunas diferentes) — as duas famílias que motivaram um ADR — sem
-promover "quatro estilos de classificação de erro do SDK", que apareceu uma vez e
-nunca produziu dado errado.
+ser exata: recorrência é contagem, não impressão. Não há terceira porta — achado
+que não passa em (1) nem em (2) você marca `wontfix` e deixa onde está; propor
+promoção fora do critério reabre exatamente o buraco que ele fecha.
 
-Quando for você a triar, é esta a régua e não há terceira porta: achado que não
-passa em (1) nem em (2) você marca `wontfix` e deixa onde está. Propor promoção
-fora do critério reabre exatamente o buraco que ele fecha.
-
-Antes de criar, confirme a duplicata você mesmo — sempre sobre **todos** os
-contêineres, nunca só o da demanda da vez:
+**A busca de duplicata é sua**, não do revisor — ele reporta a âncora e para aí.
+Faça-a antes de criar, sempre sobre **todos** os contêineres, nunca só o da
+demanda da vez:
 
 ```bash
 # arquivo — o glob atravessa as features; sem ele, o dedup cega
@@ -136,11 +155,9 @@ gh issue view <n> --comments | grep -i "<âncora>"
 glab issue view <n> --comments | grep -i "<âncora>"
 ```
 
-Duas etapas em vez de uma busca só porque **nenhum dos dois CLIs procura dentro de
-comentário**: o `--search` do `glab` cobre apenas título e descrição, e o do `gh`
-depende de qualificador de busca que nem sempre alcança. Listar os pais pelo
-rótulo e ler os comentários é determinístico e funciona igual nas duas
-plataformas.
+São duas etapas porque **nenhum dos dois CLIs procura dentro de comentário** — o
+`--search` cobre título e descrição, e só. Listar os pais pelo rótulo e ler os
+comentários é determinístico e funciona igual nas duas plataformas.
 
 Se já existe: acrescente ao registro existente o que o novo checkpoint adiciona e
 **não crie outro**. Corpo mínimo de cada achado:
@@ -166,7 +183,10 @@ Origem: checkpoint-reviewer · intervalo `<sha..sha>` · atravessa <tickets do l
 
 ## 4. Inconsistências sem defeito → registro
 
-Uma linha cada, no mesmo contêiner da demanda e **agrupadas por intervalo**. Vale aqui a mesma regra de endereço do achado: símbolo ou trecho, nunca `arquivo:linha` — o registro é o artefato de vida mais longa do fluxo, porque só sai quando alguém o promove, e portanto é onde a linha tem mais tempo para deixar de corresponder.
+Uma linha cada, no mesmo contêiner da demanda e **agrupadas por intervalo**. Vale
+aqui a mesma **âncora** do achado — o registro é o artefato de vida mais longa do
+fluxo, porque só sai quando alguém o promove, então é onde uma referência frágil
+tem mais tempo para deixar de corresponder.
 
 - **Modo arquivo:** `.scratch/<feature>/checkpoint/registro/<sha-curto>..<sha-curto>.md`
   — um arquivo por checkpoint, nomeado pelo intervalo revisado.
@@ -183,15 +203,18 @@ Em modo arquivo, o que os §3 e §4 escreveram entra num commit de assunto
 mesmo motivo que a palavra `checkpoint` cumpre no commit do passo 2. Em modo
 tracker não há commit: achado e registro são comentários na issue pai.
 
+Antes de commitar, confirme que o caminho é versionável
+(`git check-ignore .scratch/<feature>/checkpoint`). Projeto que ignora `.scratch/`
+inteiro faz o `git add` não adicionar nada e o commit sair vazio ou sem os
+arquivos — os achados somem sem erro nenhum. Se estiver ignorado, avise o usuário
+e reporte os achados no encerramento em vez de perdê-los.
+
 Uma entrada dessas sai por **um único motivo: ter virado ticket pelo critério de
-promoção do §3** — e quem a remove é o humano que a promoveu na triagem, nunca
-você e nunca o checkpoint seguinte. Não há expiração por idade, por volume nem
-por "parecer obsoleta": entrada antiga que ninguém resolveu é precisamente o que
-o registro existe para manter à vista, e é ela que torna o teste (2) do critério
-contável — expurgar por idade apagaria a evidência de recorrência antes de a
-segunda ocorrência chegar. Encontrar entradas repetidas de checkpoints anteriores é o
-funcionamento esperado, não sujeira a limpar. O rastro sobrevive do outro lado —
-o ticket promovido carrega a origem do achado.
+promoção do §3**, e quem a remove é o humano que a promoveu. Entrada antiga que
+ninguém resolveu é precisamente o que o registro existe para manter à vista: é
+ela que torna o teste (2) contável, e expurgá-la por idade apagaria a evidência
+de recorrência antes de a segunda ocorrência chegar. Entradas repetidas de
+checkpoints anteriores são o funcionamento esperado.
 
 ## 5. Propostas de processo → ao usuário, textualmente
 
@@ -209,12 +232,11 @@ tracker.
 
 **Depois dos commits que este checkpoint produziu** — o `refactor: checkpoint` do
 §2 e o `docs(checkpoint):` do §4. A ordem das seções acima é a ordem de execução,
-e a tag é o último passo por uma razão que se observa: movida antes, os commits
-do próprio ciclo caem no intervalo seguinte, e o hook, que detecta ciclo pela
-metade procurando um `refactor: checkpoint` **depois** da tag, passa a acusar
-"a tag não foi movida" em todo ciclo — um aviso falso sobre um ciclo que fechou
-certo. Aviso que mente é pior do que aviso ausente: ele treina o operador a
-ignorar a única coisa que avisa quando o ciclo de fato ficou pela metade.
+e a tag é o último passo: movida antes, os commits do próprio ciclo caem no
+intervalo seguinte, e o hook — que detecta ciclo pela metade procurando um
+`refactor: checkpoint` **depois** da tag — passa a acusar "a tag não foi movida"
+em todo ciclo. Aviso que mente treina o operador a ignorar a única coisa que
+avisa quando o ciclo de fato ficou pela metade.
 
 Local, sempre. **Nunca publique:**
 
@@ -231,15 +253,6 @@ benefício zero.
 A contrapartida, aceita de propósito: clone novo ou outra máquina começa o
 ciclo do zero, porque não há remoto de onde recuperar a tag. Quando isso
 acontecer, o hook avisa e pergunta em vez de descartar o acumulado em silêncio.
-
-Dois casos em que o push não acontece, e nenhum deles é motivo para insistir:
-
-- **Repo sem remoto** (comum em modo arquivo) — só mova a tag; não há para onde
-  publicar.
-- **Push recusado** (tag protegida, sem permissão) — a tag local já se moveu, e é
-  ela que o hook lê, então o ciclo fechou *para você*. Não tente contornar com
-  outro nome de tag nem desista da movimentação: informe o usuário de que os
-  outros clones não vão enxergar este checkpoint e siga.
 
 ## 8. Se a tag do ciclo não existir
 

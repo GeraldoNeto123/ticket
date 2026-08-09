@@ -16,11 +16,13 @@ Paralelismo é proibido nesta versão, por design: tickets são fatias verticais
 
 Leia `docs/agents/issue-tracker.md` para saber o modo (arquivo ou tracker) e o CLI. Liste os tickets da feature com o campo **Blocked by** de cada um e monte a **frontier**: os tickets cujos bloqueadores estão todos done. Trabalhe sempre a frontier; quando um ticket termina, recalcule.
 
-Leia o spec só o suficiente para saber referenciá-lo. **Não cole conteúdo de spec nem de tickets nos prompts de dispatch** — passe caminhos e referências. Tudo que você cola num prompt fica residente no seu contexto até o fim da fila; caminhos custam uma linha.
+Leia o spec só o suficiente para saber referenciá-lo. **Nos prompts de dispatch, passe caminhos e referências** — o conteúdo do spec e dos tickets fica de fora. Tudo que você cola num prompt fica residente no seu contexto até o fim da fila; um caminho custa uma linha.
 
 ## 2. Ledger
 
 Antes do primeiro dispatch, crie `.scratch/ticket-run/<slug-da-feature>.md` com uma linha por ticket: referência, status, SHA (quando houver), observação de uma linha. Atualize **após cada ticket**, não em lote.
+
+Todo checkpoint que rodar ganha **linha própria** no ledger. É ela que separa um ciclo do seguinte, e é dela que sai a contagem do passo 3.
 
 O ledger é seu mapa de recuperação: os SHAs que ele nomeia existem no git mesmo quando seu contexto já não lembra deles. Se esta sessão for compactada no meio da fila, o ledger é o que permite retomar sem reexecutar nada.
 
@@ -58,19 +60,28 @@ O subagent **lê esse arquivo, não invoca a skill**: `implement` é porta de en
 Para cada ticket da frontier, despache **um** subagent com um prompt mínimo:
 
 - Leia `<caminho absoluto da implement/SKILL.md>` primeiro e siga-o como suas instruções de trabalho. Onde o arquivo diz `$ARGUMENTS`, vale: ticket `<referência>`, spec em `<caminho do spec>`. **Se o arquivo não existir, devolva `BLOCKED` dizendo exatamente isso e não implemente nada** — sem ele você não tem os requisitos, e um ticket implementado de memória é pior do que um ticket não implementado.
-- Execute o fluxo até o fim do passo 7. **Não execute o passo 8 (checkpoint)** — se o aviso do hook chegar no commit, termine o passo 5 normalmente e inclua `CHECKPOINT_DUE` no retorno.
+- Execute o fluxo e **pare no fim do passo 7** — o passo 8 (checkpoint) é do orquestrador. Se o aviso do hook chegar no commit, termine o passo 5 normalmente e inclua `CHECKPOINT_DUE` no retorno.
 - Retorne **apenas** este contrato: `STATUS` (uma das opções abaixo) · SHA do commit (se houver) · resumo dos testes em uma linha · observações em até três linhas. Sem diff, sem histórico, sem narrativa.
 
 Status possíveis e o que fazer com cada um:
 
 - **`DONE`** — registre no ledger e siga para o próximo da frontier. Não pause para aprovação entre tickets: este é o modo autônomo; quem quer acompanhar de perto roda `/ticket:implement` à mão.
-- **`DONE` + `CHECKPOINT_DUE`** — antes do próximo ticket, **você** roda o passo 8 da `/ticket:implement` aqui no orquestrador, seguindo o `references/checkpoint.md` do diretório da skill `implement` (ao lado do `SKILL.md` que você já resolveu para dispatch): dispare o agent `checkpoint-reviewer` com o intervalo, o local dos tickets e o **lote** — as linhas de ledger (referência + SHA) dos tickets fechados neste ciclo, que só você tem —, aplique correções pequenas num `refactor: checkpoint ...`, registre os achados fora da fila e mova/publique a tag. O checkpoint é seu por dois motivos: subagent não despacha agent, e o acumulado é responsabilidade de quem enxerga a fila inteira. Registre o resultado no ledger e siga — achados novos vão para o contêiner de checkpoint da demanda (pasta `checkpoint/` irmã de `issues/` em modo arquivo; comentário na issue pai em modo tracker), fora da fila, e nascem `needs-triage`: **nunca** entram nesta frontier. A frontier é a foto do início da fila; quem a amplia é o usuário, via triagem, nunca o checkpoint.
 - **`SPEC_DESIGN`** — o subagent encontrou erro de spec de design, registrou o conflito no ticket e parou (passo 3 da implement). A skill de lá manda escalar para "uma sessão de effort alto apontada para esse registro" — **essa sessão é esta**. Pare o loop, apresente o registro ao usuário e espere a decisão dele. Decidido, o ticket volta à frontier.
-- **`BLOCKED`** — dono alheio, dependência externa, ou o subagent travou sem progresso. Pare e pergunte ao usuário. Nunca reordene a fila em silêncio para "contornar": bloqueio é informação, não obstáculo a esconder.
+- **`BLOCKED`** — dono alheio, dependência externa, ou o subagent travou sem progresso. Pare e pergunte ao usuário: bloqueio é informação, e a fila espera a resposta na ordem em que está.
 
 - **Qualquer outra coisa** — retorno fora do contrato, subagent que morreu, erro não classificado. Trate como `BLOCKED`: registre no ledger o que voltou **literalmente**, sem interpretar, e pare para perguntar. Um retorno que você não reconhece é a situação em que menos se sabe o que aconteceu com o repositório, e portanto a pior hora para adivinhar um status e seguir. Reexecutar o ticket também não é decisão sua: o subagent pode ter commitado antes de morrer.
 
 Todo desfecho — inclusive os ruins — vira linha no ledger. Descarte silencioso é proibido: um ticket que "sumiu" da fila é um bug seu.
+
+### Quando o checkpoint vence
+
+**Quem conta é você, pelo ledger.** Cinco tickets fechados desde a última linha de checkpoint (ou desde o início da fila) fecham um ciclo, e o próximo dispatch só sai depois dele.
+
+Um `CHECKPOINT_DUE` que volte de um subagent **confirma** a contagem; a ausência dele não diz nada. O aviso vem do hook `runbook-checkpoint.py`, que só fala com a sessão que de fato entrou no fluxo — e o subagent chega à `implement` **lendo o arquivo**, não invocando a skill, então pode não casar esse filtro. O hook também é infraestrutura da máquina: numa máquina sem ele, aviso nenhum chega, nunca. Contar no ledger é o que faz o ciclo vencer nos dois casos.
+
+Vencido, **você** roda o passo 8 aqui no orquestrador, seguindo o `references/checkpoint.md` do diretório da skill `implement` (ao lado do `SKILL.md` que você já resolveu para dispatch): dispare o agent `checkpoint-reviewer` com o intervalo, o local dos tickets e o **lote** — as linhas de ledger (referência + SHA) dos tickets fechados neste ciclo, que só você tem —, aplique correções pequenas num `refactor: checkpoint ...`, registre os achados fora da fila e mova a tag. O checkpoint é seu por dois motivos: subagent não despacha agent, e o acumulado é responsabilidade de quem enxerga a fila inteira.
+
+Registre o resultado no ledger e siga. Achados novos vão para o contêiner de checkpoint da demanda (pasta `checkpoint/` irmã de `issues/` em modo arquivo; comentário na issue pai em modo tracker), fora da fila, e nascem `needs-triage`: **nunca** entram nesta frontier. A frontier é a foto do início da fila; quem a amplia é o usuário, via triagem, nunca o checkpoint.
 
 ## 4. Encerramento
 

@@ -22,7 +22,7 @@ O diretório-base desta skill aparece no cabeçalho quando ela é invocada. Reso
 
 Ele imprime o caminho absoluto do `SKILL.md` que **de fato roda** — a versão instalada vive no caminho, então nada aqui pode fixá-la. Se o script falhar, ele já diz o que fazer: pare e siga a instrução dele, não improvise um spec por conta própria. Um documento com a forma errada quebra o `/ticket:split` e a `/ticket:implement` mais adiante, e quebra em silêncio.
 
-**Leia o arquivo e siga-o.** Não tente invocar a skill: ela é `disable-model-invocation`, e o Skill tool recusa invocação vinda de modelo — é o mesmo motivo pelo qual a `/ticket:run` lê a `implement` em vez de invocá-la.
+**Leia o arquivo e siga-o** — ele é `disable-model-invocation`, então o Skill tool recusaria a invocação.
 
 ## 2. Confirmar o que você espera dele
 
@@ -37,7 +37,7 @@ Se alguma sumiu ou mudou de forma, **pare e diga o que mudou**. Seguir uma forma
 
 Aplique estes ao documento que o `to-spec` manda escrever. Eles não substituem nada de lá; cobrem o que o upstream não tem como saber, porque dizem respeito a quem lê o spec **depois**.
 
-**Referência a código é símbolo ou trecho citado, nunca `arquivo:linha`.** O upstream já pede para evitar caminho e snippet, mas não nomeia número de linha nem diz o que escrever no lugar — e é aí que a âncora entra. A numeração se move a cada ticket implementado; quem ler depois edita a linha errada com um diff de aparência plausível, que é o modo de falha silencioso. Escreva `ContratacaoService.assinar`, não `contratacao.service.ts:537`. Num repo que usa este fluxo, o hook `referencias-de-linha.py` acusa a âncora na hora em que ela é escrita — se o aviso aparecer, troque ali mesmo, enquanto o contexto para achar o símbolo ainda está aberto.
+**Referência a código é âncora: símbolo ou trecho citado, nunca `arquivo:linha`.** O upstream já pede para evitar caminho e snippet, mas não nomeia número de linha nem diz o que pôr no lugar. Escreva `ContratacaoService.assinar`, não `contratacao.service.ts:537`. O hook `referencias-de-linha.py` acusa na hora e explica o porquê — troque ali mesmo, enquanto o contexto para achar o símbolo ainda está aberto.
 
 **As costuras precisam sobreviver no documento, não só no acordo.** O upstream faz você desenhá-las e conferi-las com o usuário; o que este fluxo consome é o **registro** delas. A `/ticket:implement` manda usar `/tdd` "nas costuras pré-acordadas, que vêm do spec", e trata spec sem costura nomeada como lacuna — o ticket para e escala. Cada sessão de implementação começa limpa e não esteve na conversa em que vocês concordaram: nomeie a costura de um jeito que uma sessão nova ache, pelo módulo e pelo símbolo.
 

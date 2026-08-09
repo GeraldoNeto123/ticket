@@ -24,7 +24,7 @@ Ele imprime o caminho absoluto do `SKILL.md` que de fato roda. Se falhar, a mens
 
 **Leia o arquivo agora, mas execute-o só no passo 3.** Ler antes é o que te permite conferir, no passo 2, se o portão ainda encaixa no que ele espera receber.
 
-**Não tente invocar a skill:** ela é `disable-model-invocation` e o Skill tool recusa invocação vinda de modelo — o mesmo motivo pelo qual a `/ticket:run` lê a `implement` em vez de invocá-la.
+Leia o arquivo; **não** invoque a skill — ela é `disable-model-invocation`, e o Skill tool recusaria.
 
 Confirme que o arquivo lido ainda tem o que os passos seguintes pressupõem: **arestas de bloqueio** por ticket (`Blocked by` / link nativo), um **template** de ticket e a noção de **frontier**. Se algo mudou de forma, pare e diga o que mudou — seguir a forma nova com adendos escritos para a antiga produz tickets que se contradizem, e o erro só aparece na implementação.
 
@@ -52,7 +52,7 @@ Agora sim, siga o `to-tickets` que você leu, com dois acréscimos:
 
 **O ADR é entrada.** Cada ticket que toca um campo mapeado cita o ADR pelo número. O brief não reenumera escritores — o documento faz isso e sobrevive ao `/clear`, que o brief não faz.
 
-**Referência a código é símbolo ou trecho, nunca `arquivo:linha`.** O upstream já pede para evitar caminho e snippet, mas não nomeia número de linha nem diz o que escrever no lugar. O ticket é lido semanas depois, com todo ticket anterior já tendo empurrado as linhas do arquivo: escreva `ContratacaoService.assinar`, não `contratacao.service.ts:537`. Num repo que usa este fluxo, o hook `referencias-de-linha.py` acusa a âncora na hora — troque ali mesmo.
+**Referência a código é âncora: símbolo ou trecho, nunca `arquivo:linha`.** O ticket é lido semanas depois, com todo ticket anterior já tendo empurrado as linhas do arquivo: escreva `ContratacaoService.assinar`, não `contratacao.service.ts:537`. O hook `referencias-de-linha.py` acusa na hora — troque ali mesmo.
 
 **Em modo tracker, a demanda precisa de issue pai.** O upstream trata o `## Parent` como opcional; aqui ele não é. Os achados do checkpoint vivem como comentários na issue pai, e sem pai o checkpoint para e pergunta — no meio de uma fila em andamento, que é a pior hora. Se não houver pai, pergunte ao usuário **agora**, antes de publicar os tickets: criar estrutura no tracker de alguém por conta própria é surpresa, mas perguntar aqui custa uma frase.
 
