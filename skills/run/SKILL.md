@@ -39,7 +39,9 @@ Ele é memória de **execução**, não conhecimento do projeto — os fatos dur
 
 ## 3. O loop
 
-Primeiro, resolva o caminho da skill `implement`: ela mora ao lado desta, em `<diretório-base desta skill>/../implement/SKILL.md` (o diretório-base aparece no cabeçalho quando esta skill é invocada). Resolva para caminho absoluto uma vez e reuse em todos os dispatches — **conferindo antes de cada um que o arquivo ainda existe** (`test -f`). O caminho carrega a versão do plugin (`.../ticket/<versão>/skills/...`), e um `plugin update` no meio da fila poda o diretório da versão antiga: o caminho que você resolveu no primeiro ticket morre sem aviso, e os dispatches seguintes mandam o subagent ler um arquivo que não está mais lá. Já aconteceu.
+Primeiro, resolva o caminho da skill `implement`. Ela mora ao lado desta, em `<diretório-base desta skill>/../implement/SKILL.md`; o diretório-base aparece no cabeçalho quando esta skill é invocada. Resolva para caminho absoluto uma vez e reuse em todos os dispatches — **conferindo antes de cada um que o arquivo ainda existe** (`test -f`).
+
+O caminho carrega a versão do plugin (`.../ticket/<versão>/skills/...`). Um `plugin update` no meio da fila poda o diretório da versão antiga: o caminho que você resolveu no primeiro ticket morre sem aviso, e os dispatches seguintes mandam o subagent ler um arquivo que não está mais lá. Já aconteceu.
 
 Se sumiu, **não tente re-resolver pelo diretório-base que veio no cabeçalho** — ele aponta para a mesma pasta podada e está tão morto quanto. Ache a versão nova por fora do plugin:
 
@@ -61,7 +63,16 @@ Para cada ticket da frontier, despache **um** subagent com um prompt mínimo:
 
 - Leia `<caminho absoluto da implement/SKILL.md>` primeiro e siga-o como suas instruções de trabalho. Onde o arquivo diz `$ARGUMENTS`, vale: ticket `<referência>`, spec em `<caminho do spec>`. **Se o arquivo não existir, devolva `BLOCKED` dizendo exatamente isso e não implemente nada** — sem ele você não tem os requisitos, e um ticket implementado de memória é pior do que um ticket não implementado.
 - Execute o fluxo e **pare no fim do passo 7** — o passo 8 (checkpoint) é do orquestrador. Se o aviso do hook chegar no commit, termine o passo 5 normalmente e inclua `CHECKPOINT_DUE` no retorno.
-- Retorne **apenas** este contrato: `STATUS` (uma das opções abaixo) · SHA do commit (se houver) · resumo dos testes em uma linha · observações em até três linhas. Sem diff, sem histórico, sem narrativa.
+- Retorne **apenas** o contrato abaixo. Sem diff, sem histórico, sem narrativa.
+
+<contrato-de-retorno>
+
+- [ ] `STATUS` — uma das opções da lista abaixo, escrita literalmente
+- [ ] SHA do commit, se houver
+- [ ] Resumo dos testes em **uma** linha
+- [ ] Observações em até **três** linhas
+
+</contrato-de-retorno>
 
 Status possíveis e o que fazer com cada um:
 

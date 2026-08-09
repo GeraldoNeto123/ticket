@@ -8,141 +8,147 @@ disable-model-invocation: true
 
 **Ticket desta sessão:** $ARGUMENTS
 
-O argumento aponta o ticket e, se houver, o preâmbulo/spec obrigatório. Leia ambos antes de qualquer coisa. Escopo é sagrado: implemente **apenas** este ticket — se o trabalho crescer, o excedente vira ticket novo, não escopo deste.
+O argumento aponta o ticket e, se houver, o preâmbulo/spec obrigatório. Leia ambos antes de qualquer coisa. Escopo é sagrado: implemente **apenas** este ticket. Se o trabalho crescer, o excedente vira ticket novo.
 
-**Pré-requisito:** o plugin `mattpocock-skills` — o `/tdd` do passo 2 e o `mattpocock-skills:code-review` do passo 5 vêm dele. Se a invocação de qualquer um falhar por skill inexistente, não improvise um substituto: pare e instrua a instalação (comandos no README do plugin `ticket`).
+**Pré-requisito:** o plugin `mattpocock-skills`. O `/tdd` do passo 2 e o `mattpocock-skills:code-review` do passo 5 vêm dele. Se qualquer um falhar por skill inexistente, pare e instrua a instalação — os comandos estão no README do plugin `ticket`. Improvisar um substituto é pior do que parar.
 
-**Onde o ticket vive é decisão do projeto, não desta skill.** Leia `docs/agents/issue-tracker.md` primeiro: ele diz se os tickets são arquivos markdown, issues do GitHub, do GitLab ou de outro tracker, e qual CLI usar (`gh`, `glab`, ...). Toda vez que esta skill mandar escrever *no ticket*, é esse arquivo que define se isso é editar um `.md` ou comentar numa issue. Se ele não existir, pergunte ao usuário onde vivem os tickets — não presuma arquivo.
+**Onde o ticket vive é decisão do projeto.** Leia `docs/agents/issue-tracker.md` primeiro: ele diz se os tickets são arquivos markdown ou issues de um tracker, e qual CLI usar. Toda vez que esta skill mandar escrever *no ticket*, é esse arquivo que decide se isso é editar um `.md` ou comentar numa issue. Se ele não existir, pergunte ao usuário onde vivem os tickets.
 
 ## 1. Reivindicar o ticket
 
-**Bloqueadores antes de dono.** O `/to-tickets` grava em cada ticket quem o bloqueia — campo `Blocked by` no `.md`, links de bloqueio nativos no tracker. Confira antes de reivindicar: se algum bloqueador ainda está aberto, **pare** — o ticket está fora da frontier, e implementá-lo agora é construir sobre base que ainda não existe. Informe o usuário e pergunte qual ticket pegar no lugar.
+**Bloqueadores antes de dono.** O `/to-tickets` grava em cada ticket quem o bloqueia. Confira antes de reivindicar. Bloqueador ainda aberto = ticket fora da frontier: **pare**, informe o usuário e pergunte qual pegar no lugar. Implementá-lo agora é construir sobre base que ainda não existe.
 
-**Antes de ler código.** Confira a quem o ticket está atribuído, do jeito que o `issue-tracker.md` definir:
+**O dono é o operador, nunca a sessão.** Você não é um ator no tracker: quem responde pelo ticket é o humano ao teclado.
 
-```bash
-gh issue view <n> --json assignees        # GitHub
-glab issue view <n>                       # GitLab
-```
+Confira a atribuição antes de ler código, com o CLI que o `issue-tracker.md` definir (`gh issue view <n> --json assignees`, `glab issue view <n>`). Em modo arquivo a atribuição é a linha `Assignee:` no topo do `.md` — convenção deste fluxo, não do `to-tickets`. Repo que ainda não a tem trata o ticket como sem dono, e a linha nasce quando alguém assume.
 
-Em modo arquivo, use a linha `Assignee:` no topo do `.md`; se o repo ainda não tem essa convenção, trate como sem dono e crie a linha ao assumir.
+Três casos, e só um segue em frente:
 
-**O dono é sempre a pessoa que está operando, nunca a sessão.** Você não é um ator no tracker: quem responde pelo ticket é o humano ao teclado. Em tracker, `@me` já resolve para o usuário autenticado no CLI, que é ele. Em modo arquivo não há `@me`, então leia a identidade do git:
-
-```bash
-git config user.name     # é esse nome que vai na linha Assignee
-```
-
-Três casos, e só um deles segue em frente:
-
-- **De outra pessoa** → **pare aqui.** Não implemente, não atribua a ninguém. Diga quem é o dono e pergunte ao usuário qual caminho: assumir mesmo assim ou trocar de ticket. A decisão é dele — atribuição alheia costuma significar trabalho já em curso, e implementar por cima gera conflito de merge e trabalho jogado fora.
-- **Sem dono** → atribua ao operador e siga:
-
-  ```bash
-  gh issue edit <n> --add-assignee @me          # GitHub
-  glab issue update <n> --assignee @me          # GitLab
-  # arquivo: **Assignee:** <git config user.name>
-  ```
-
+- **De outra pessoa** → **pare aqui.** Diga quem é o dono e pergunte ao usuário: assumir mesmo assim, ou trocar de ticket. A decisão é dele. Atribuição alheia costuma significar trabalho já em curso, e implementar por cima gera conflito de merge e trabalho jogado fora.
+- **Sem dono** → atribua ao operador e siga. Em tracker, `--add-assignee @me` resolve para o usuário autenticado no CLI, que é ele. Em modo arquivo não há `@me`: o nome vem de `git config user.name`.
 - **Já é do operador** → siga.
 
 ## 2. Implementar
 
-Antes de escrever código, leia os ADRs e o glossário do projeto — na convenção destas skills o glossário é o `CONTEXT.md` na raiz, e os ADRs ficam em `docs/adr/` se o projeto não documentar outro lugar. Cada sessão começa limpa e não viu os tickets anteriores — o que atravessa o `/clear` são esses registros. Decisão já tomada ali não se reabre aqui; se o ticket contradiz um ADR, isso é conflito de spec (passo 3).
+Antes de escrever código, leia os ADRs e o glossário. Na convenção destas skills o glossário é o `CONTEXT.md` na raiz, e os ADRs ficam em `docs/adr/`. Cada sessão começa limpa e não viu os tickets anteriores: o que atravessa o `/clear` são esses registros. Decisão já tomada ali não se reabre aqui. Ticket que contradiz um ADR é conflito de spec — passo 3.
 
-**Se este ticket acrescentar um escritor a um campo que um ADR governa, o ADR não pode ficar como estava.** Ler não basta: leitura não produz a linha que o próximo ticket precisa encontrar, e o próximo ticket é uma sessão limpa que só tem o documento. O caso cai nos dois do passo 3, sem protocolo novo:
+**Ticket que acrescenta um escritor a um campo governado por ADR muda o ADR.** Ler não basta. Leitura não produz a linha que o próximo ticket precisa encontrar, e o próximo ticket é uma sessão limpa que só tem o documento. O caso cai nos dois do passo 3, sem protocolo novo:
 
-- O escritor novo **obedece** à regra já decidida — quem ganha no conflito, o que cada um faz quando não sabe o valor: acrescentá-lo à lista do ADR é correção **factual**. Vai no mesmo commit `docs:`, e o ticket segue.
-- O escritor novo **não cabe** na regra — pede outro critério de desempate, ou o caso "não sabe" não estava previsto: isso é **design**. Registre no ticket, pare e escale.
+- O escritor **obedece** à regra já decidida — quem ganha no conflito, o que cada um faz quando não sabe o valor. Acrescentá-lo à lista do ADR é correção **factual**: entra no mesmo commit `docs:`, e o ticket segue.
+- O escritor **não cabe** na regra — pede outro critério de desempate, ou o caso "não sabe" não estava previsto. Isso é **design**: registre no ticket, pare e escale.
 
-Duas ressalvas, porque o roteamento para o passo 3 traz junto duas regras que **não** valem aqui:
+Duas ressalvas, porque o roteamento para o passo 3 traz junto regras que **não** valem aqui:
 
-- **ADR sempre commita, inclusive em tracker.** A regra de editar o corpo da issue vale para o spec, que o `/to-spec` publica lá; o ADR mora em `docs/adr/` do repositório nos dois modos, então a correção é sempre um `docs:`.
-- **Só o caso de design entra na métrica do passo 7.** Escritor que obedece à regra é evolução normal do código e não diz nada sobre a qualidade do spec — contá-lo infla o `spec-errors.md` com trabalho saudável. Escritor que exige critério novo é o portão de modelagem tendo saído incompleto, que é exatamente o que a métrica existe para medir.
+- **ADR sempre commita, inclusive em tracker.** Editar o corpo da issue vale para o spec, que o `/to-spec` publica lá. O ADR mora em `docs/adr/` nos dois modos, então a correção é sempre um `docs:`.
+- **Só o caso de design entra na métrica do passo 7.** Escritor que obedece à regra é evolução normal do código e não diz nada sobre a qualidade do spec; contá-lo infla o `spec-errors.md` com trabalho saudável. Escritor que exige critério novo é o portão de modelagem tendo saído incompleto — que é exatamente o que a métrica mede.
 
-O portão do `/ticket:split` enumerou os escritores antes de a fila existir; um ticket que cria escritor sem devolver essa informação ao ADR desfaz o portão um passo adiante, e o defeito reaparece no checkpoint, caro.
+O portão do `/ticket:split` enumerou os escritores antes de a fila existir. Ticket que cria escritor sem devolver a informação ao ADR desfaz o portão um passo adiante, e o defeito reaparece no checkpoint, caro.
 
-**Número de linha no ticket é pista; a âncora é o símbolo ou o trecho descrito.** Localize pelo alvo descrito — mesmo quando o número ainda bate, quem manda é a âncora. Se o alvo não existe em lugar nenhum (símbolo renomeado, arquivo dividido, código já removido), isso não é ticket difícil: é o spec descrevendo um código que mudou, e o passo 3 trata.
+**Número de linha no ticket é pista; a âncora é o símbolo ou o trecho descrito.** Localize pelo alvo descrito, mesmo quando o número ainda bate. Alvo que não existe em lugar nenhum — símbolo renomeado, arquivo dividido, código já removido — não é ticket difícil: é o spec descrevendo um código que mudou, e o passo 3 trata.
 
 Implemente restrito ao escopo deste ticket:
 
-- Use `/tdd` nas costuras pré-acordadas — elas vêm do spec/preâmbulo, onde o `/to-spec` as registrou. Se o spec não nomeia costura nenhuma, isso é lacuna de spec: trate pelo passo 3 em vez de deixar o `/tdd` parar o fluxo para perguntar ao usuário.
-- Enquanto trabalha, rode **só** typecheck e os testes do arquivo que você está mexendo. A suíte completa pertence ao passo 4 e roda **uma vez por ticket**: rodá-la aqui também dobra a parte mais cara da fila sem descobrir nada que o passo 4 não descubra.
+- Use `/tdd` nas costuras pré-acordadas, que vêm do spec/preâmbulo. Spec que não nomeia costura nenhuma é lacuna de spec: trate pelo passo 3, em vez de deixar o `/tdd` parar o fluxo para perguntar ao usuário.
+- Enquanto trabalha, rode **só** typecheck e os testes do arquivo que está mexendo. A suíte completa é do passo 4 e roda **uma vez por ticket**: repeti-la aqui dobra a parte mais cara da fila sem descobrir nada novo.
 
 O commit é o passo 5, depois da verificação e do protocolo de erro de spec.
 
 ## 3. Protocolo de erro de spec
 
-Se o spec conflitar com a realidade do código, pare e triageie — nunca implemente por cima do conflito:
+Spec que conflita com a realidade do código para o trabalho e vai para triagem. Implementar por cima do conflito é o que este protocolo existe para impedir.
 
-- **Factual** (só existe um jeito certo: nome de coluna errado, assinatura desatualizada, arquivo movido): corrija o spec agora e siga o ticket. Em modo arquivo isso é editar o doc e commitar `docs:` separado; em tracker o spec é uma issue (o `/to-spec` publica lá), então edite o corpo dela — sem commit.
-- **De design** (a correção reabre uma decisão com alternativas reais): registre **no ticket** três coisas — o que o spec diz, o que o código mostra, por que conflitam. Em modo arquivo isso é editar o `.md`; em tracker, um comentário na issue (`gh issue comment`, `glab issue note`). Depois **pare o ticket** e informe o usuário: a decisão pertence a uma sessão de effort alto apontada para esse registro. Não decida design aqui.
+- **Factual** — só existe um jeito certo: nome de coluna errado, assinatura desatualizada, arquivo movido. Corrija o spec agora e siga o ticket.
+- **De design** — a correção reabre uma decisão com alternativas reais. Registre **no ticket** três coisas: o que o spec diz, o que o código mostra, por que conflitam. Depois **pare o ticket** e informe o usuário. A decisão pertence a uma sessão de effort alto apontada para esse registro.
 
-**Na dúvida, é design.** Classificar como factual e seguir é o caminho de menor resistência — resista: o custo de escalar à toa é uma sessão; o de decidir design aqui é o bug que este protocolo existe para impedir.
+**Onde gravar cada um, por modo, está em [`references/erro-de-spec.md`](references/erro-de-spec.md)** — junto da métrica do passo 7, que só existe quando este passo dispara.
+
+**Na dúvida, é design.** Classificar como factual e seguir é o caminho de menor resistência. O custo de escalar à toa é uma sessão; o de decidir design aqui é o bug que este protocolo existe para impedir.
 
 ## 4. Verificar
 
-Evidência antes de alegação: rode as verificações de verdade e confira a saída antes de dizer que está pronto. São typecheck, testes e — quando o projeto os configura — lint e checagem de formatação. Descubra os comandos onde o projeto os declara (`package.json`, `Makefile`, `pyproject.toml`, CI) em vez de assumir um stack: projeto sem linter não ganha um aqui, e o comando ausente é resposta, não falha do ticket.
+Evidência antes de alegação: rode as verificações e confira a saída antes de dizer que está pronto. São typecheck, testes e — quando o projeto os configura — lint e checagem de formatação. Descubra os comandos onde o projeto os declara: `package.json`, `Makefile`, `pyproject.toml`, CI. Projeto sem linter não ganha um aqui; comando ausente é resposta, não falha do ticket.
 
-Rode a checagem em modo verificação, nunca em modo correção (`--check`, não `--write`): formatador reescrevendo arquivo no passo 4 mistura mudança de estilo com a do ticket e polui o diff que o passo 5 vai revisar.
+Rode a checagem em modo verificação (`--check`), nunca em modo correção (`--write`). Formatador reescrevendo arquivo aqui mistura mudança de estilo com a do ticket e polui o diff que o passo 5 vai revisar.
 
-**Critério de aceite que afirma algo sobre um conjunto que você não enumerou** não se verifica pelo ramo que você editou. O teste é esse — o conjunto —, e ele tem duas formas que enganam por parecerem opostas: *todos* os membros obedecem ("sempre", "nenhum", "em qualquer fluxo") ou existe *um só* ("uma política só", "um único escritor", "o único formato"). As duas afirmam a mesma coisa sobre o conjunto inteiro, e nenhuma se verifica olhando o membro que você mexeu. Suíte verde prova que o caminho testado funciona, não que os outros obedecem. Enumere os caminhos e diga o que viu em cada um; se um ADR mapeia os escritores daquele campo, ele já é a lista, e o `grep` pelo nome do campo fecha o que faltar. Sem a enumeração, não marque `[x]`: marcar invariante por amostragem é a forma mais barata de transformar uma suposição em fato conhecido, e o próximo ticket vai construir em cima dela.
+<invariante>
+
+**Critério de aceite que afirma algo sobre um conjunto não se verifica pelo ramo que você editou.** O teste é o conjunto. Ele tem duas formas, que enganam por parecerem opostas:
+
+- *todos* os membros obedecem — "sempre", "nenhum", "em qualquer fluxo";
+- existe *um só* — "uma política só", "um único escritor", "o único formato".
+
+As duas afirmam a mesma coisa sobre o conjunto inteiro, e nenhuma se verifica olhando o membro que você mexeu. Suíte verde prova que o caminho testado funciona, não que os outros obedecem.
+
+Enumere os caminhos e diga o que viu em cada um. Havendo ADR que mapeie os escritores daquele campo, ele já é a lista, e o `grep` pelo nome do campo fecha o que faltar. Sem a enumeração, o `[x]` não é marcado: invariante marcada por amostragem é uma suposição virando fato conhecido, e o próximo ticket constrói em cima dela.
+
+</invariante>
+
+### Critério de conclusão
+
+- [ ] Typecheck rodou e passou — saída conferida, não presumida
+- [ ] A suíte completa rodou **uma vez** e passou
+- [ ] Lint e formatação rodaram em `--check`, ou o projeto não os declara
+- [ ] Todo critério de aceite do ticket está marcado, e os que afirmam algo sobre um conjunto vieram com a enumeração
 
 ## 5. Commit, revisar, amend
 
-Nesta ordem — a revisão vem **depois** do commit, não antes:
+Nesta ordem. A revisão vem **depois** do commit:
 
-1. **Commite.** Anote o SHA anterior (`git rev-parse HEAD`) antes de commitar; ele é o ponto fixo do passo seguinte.
-2. **Revise** com `mattpocock-skills:code-review` passando `<sha-anterior>` como ponto fixo. Use o nome com escopo: é assim que ela aparece na listagem (skills de plugin são registradas como `plugin:skill`), e o harness ainda tem um `/code-review` próprio, acionável só pelo usuário.
+1. **Commite.** Anote o SHA anterior (`git rev-parse HEAD`) antes de commitar — ele é o ponto fixo do passo seguinte.
+2. **Revise** com `mattpocock-skills:code-review`, passando `<sha-anterior>` como ponto fixo. Use o nome com escopo: é assim que ela aparece na listagem, e o harness ainda tem um `/code-review` próprio, acionável só pelo usuário.
 3. **Aplique o que couber via `--amend`**, mantendo **1 ticket = 1 commit**. Antes de qualquer `--amend`, duas conferências:
    - `git log -1` — o amend acerta o HEAD, não o commit que você tem em mente.
-   - O commit ainda não subiu. O push da branch é **manual e fora desta skill**, mas nada impede o operador de ter pushado no meio: se `git log @{u}..HEAD` vier vazio, o commit já está no upstream e amendar reescreveria histórico publicado — aplique os achados num commit novo e registre a exceção à regra de 1 commit. Sem upstream configurado não houve push; amend seguro.
+   - O commit ainda não subiu. O push da branch é manual e fora desta skill, mas o operador pode ter pushado no meio. Se `git log @{u}..HEAD` vier vazio, o commit já está no upstream, e amendar reescreveria histórico publicado: aplique os achados num commit novo e registre a exceção à regra de 1 commit. Sem upstream configurado não houve push, e o amend é seguro.
 
-     Esse commit de exceção leva **`achados de <sha-curto>`** no assunto, com o sha do commit revisado:
+O commit de exceção leva **`achados de <sha-curto>`** no assunto, com o sha do commit revisado:
 
-     ```
-     refactor(escopo): achados de 9d281b74 — <resumo>
-     ```
+```
+refactor(escopo): achados de 9d281b74 — <resumo>
+```
 
-     O marcador não é enfeite: o contador do passo 8 conta commits, não tickets, e sem ele este commit passaria por um segundo ticket e fecharia o ciclo cedo. É o mesmo papel da palavra `checkpoint` no commit do passo 8 — e `achados de <sha>` ainda diz *qual* commit foi revisado, o que a palavra sozinha não diria.
+O marcador não é enfeite. O contador do passo 8 conta commits, não tickets: sem ele, este commit passaria por um segundo ticket e fecharia o ciclo cedo. É o mesmo papel da palavra `checkpoint` no commit do passo 8, e ainda diz *qual* commit foi revisado.
 
-A ordem importa: o `code-review` diffa `<ponto-fixo>...HEAD`, então só enxerga trabalho **commitado**. Invocado antes do commit ele não tem ponto fixo válido e revisa o commit anterior ou nada — sem erro visível, com relatório de aparência normal.
+A ordem importa. O `code-review` diffa `<ponto-fixo>...HEAD`, então só enxerga trabalho **commitado**. Invocado antes do commit, ele revisa o commit anterior ou nada — sem erro visível, com relatório de aparência normal.
 
 Commits `docs:` do passo 3 e `refactor:` do passo 8 são exceções à regra de um commit por ticket.
 
 ## 6. Encerrar o ticket
 
-Separe dois fatos que costumam ser confundidos:
+Dois fatos que se confundem:
 
 - **Feito** — o trabalho acabou e está commitado. É o que você sabe agora.
-- **Fechado** — o código está na branch principal. Isso só é verdade depois do merge, e você não controla quando acontece.
+- **Fechado** — o código está na branch principal. Só é verdade depois do merge, e você não controla quando acontece.
 
-Marque o primeiro; **deixe o segundo para o merge**. Fechar a issue no push mente sobre o estado do código, e é o que quebra o board de quem confia nele.
+Marque o primeiro; **deixe o segundo para o merge.** Fechar a issue no push mente sobre o estado do código, e é o que quebra o board de quem confia nele.
 
 Na prática, por modo:
 
-- **Arquivo `.md`:** o que separa feito de fechado não é onde o ticket vive, e sim se o commit passa por PR/branch de integração. Commit direto na branch principal → feito *é* o fim: marque `Status: done` (ou o rótulo equivalente no `triage-labels.md`) e pronto. Se o projeto usa PR mesmo com tickets em arquivo, trate como tracker: marque o equivalente a "aguardando merge" e só `done` depois do merge.
-- **Tracker:** garanta que o commit carrega o trailer de referência (`Closes #<n>`, `Fecha #<n>`) e mova o ticket para o estado de "aguardando merge" que o projeto usar. **Não feche à mão** — GitHub e GitLab fecham sozinhos quando o commit chega na branch default, e projetos com branch de integração podem ter CI cobrindo o resto.
+- **Arquivo `.md`:** o que separa feito de fechado é se o commit passa por PR ou branch de integração. Commit direto na principal → marque `Status: done`, ou o rótulo equivalente do `triage-labels.md`. Projeto que usa PR mesmo com tickets em arquivo → trate como tracker.
+- **Tracker:** garanta que o commit carrega o trailer de referência (`Closes #<n>`) e mova o ticket para o estado de "aguardando merge" do projeto. **Não feche à mão:** GitHub e GitLab fecham sozinhos quando o commit chega na branch default.
 
-Uma armadilha que vale conhecer: o fechamento automático nativo só dispara na **branch default**. Se o time trabalha numa branch de integração (`development`) e a default é outra (`main`), a issue fica aberta depois do commit e só fecha quando a integração sobe. Isso é esperado, não é bug — e os verbos em português (`Fecha`, `Resolve`) não são reconhecidos nativamente por nenhuma das duas plataformas, só por CI própria.
+<armadilha>
+
+O fechamento automático nativo só dispara na **branch default**. Time que trabalha numa branch de integração (`development`) com a default em outra (`main`) vê a issue seguir aberta depois do commit; ela só fecha quando a integração sobe. Isso é esperado, não é bug.
+
+Os verbos em português (`Fecha`, `Resolve`) não são reconhecidos nativamente por nenhuma das duas plataformas — só por CI própria.
+
+</armadilha>
+
+### Critério de conclusão
+
+- [ ] O ticket está no estado que corresponde a *feito*, pelo modo do projeto
+- [ ] Nenhuma issue foi fechada à mão
 
 ## 7. Métrica
 
-Se o passo 3 disparou, registre uma linha: data, ticket, tipo (factual | design), resumo de uma linha.
-
-Onde gravar depende do modo, e o arquivo é sempre versionado — a métrica é sobre a qualidade do spec ao longo do tempo, então precisa sobreviver ao ticket:
-
-- **Tickets como arquivo:** `spec-errors.md` ao lado deles (ex.: `.scratch/<feature>/issues/spec-errors.md`).
-- **Tickets num tracker:** `docs/spec-errors.md` no repo, com o número da issue na linha. Não sirva a métrica só como comentário na issue — comentário espalhado não se soma.
-
-O commit da linha acompanha o desfecho: no caso **factual**, ela entra no mesmo `docs:` do passo 3; no caso **design**, commit `docs:` próprio antes de parar o ticket — parar sem commitar a métrica é perdê-la.
+Só se o passo 3 disparou. Onde gravar a linha e como commitá-la está em [`references/erro-de-spec.md`](references/erro-de-spec.md), que você já leu ao registrar o conflito.
 
 ## 8. Checkpoint de consistência
 
 **Despachado por um `/ticket:run`?** Este passo não é seu: termine o passo 7, inclua `CHECKPOINT_DUE` no retorno caso o aviso do hook tenha chegado, e pare aí. O checkpoint pertence a quem enxerga a fila inteira — e subagent não despacha agent, então tentar aqui não falha com erro, falha em silêncio.
 
-Em sessão manual, quem conta é o hook `runbook-checkpoint.py` (PostToolUse, roda sozinho depois de todo `git commit`): ele avisa quando o ciclo de **5** commits de ticket vence, e traz o nome exato da sua tag e o comando a rodar — use-os como vieram.
+Em sessão manual, quem conta é o hook `runbook-checkpoint.py` (PostToolUse, roda sozinho depois de todo `git commit`). Ele avisa quando o ciclo de **5** commits de ticket vence, e traz o nome exato da sua tag e o comando a rodar — use-os como vieram.
 
-O aviso chega no commit do passo 5.1, ainda antes da revisão e do amend. **Termine o passo 5 primeiro** — o checkpoint revisa o acumulado, e o commit deste ticket só está pronto depois do amend.
+O aviso chega no commit do passo 5.1, ainda antes da revisão e do amend. **Termine o passo 5 primeiro:** o checkpoint revisa o acumulado, e o commit deste ticket só está pronto depois do amend.
 
-**O procedimento vive em `references/checkpoint.md`, no diretório desta skill — leia-o quando o checkpoint vencer.** Ele cobre o ciclo escopado por operador, a conferência de que o hook está mesmo instalado, o disparo do agent, o destino de cada classe do relatório e o fechamento do ciclo. Está fora daqui porque roda uma vez a cada cinco tickets: nas outras quatro, seria contexto carregado à toa.
+**O procedimento vive em [`references/checkpoint.md`](references/checkpoint.md) — leia-o quando o checkpoint vencer.** Ele cobre o ciclo escopado por operador, a conferência de que o hook está mesmo instalado, o disparo do agent e o fechamento do ciclo. Está fora daqui porque roda uma vez a cada cinco tickets: nas outras quatro, seria contexto carregado à toa.
