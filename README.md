@@ -47,11 +47,11 @@ Reinicie a sessão (ou `/reload-plugins`) e invoque:
 /ticket:run <spec/feature>                                 # a fila inteira, modo autônomo
 ```
 
-As duas primeiras **envolvem** o `to-spec` e o `to-tickets` do `mattpocock-skills` em vez de duplicá-los: leem o `SKILL.md` de lá (os dois são `disable-model-invocation`, e o Skill tool recusa invocação vinda de modelo) e acrescentam o que só quem conhece o resto do fluxo sabe — o portão de modelagem antes do fatiamento, o ADR como entrada dos tickets, a issue pai que o checkpoint vai precisar, e referência de código por símbolo. O upstream segue se atualizando sem merge; em troca, as duas conferem se o arquivo lido ainda tem a forma que os adendos pressupõem e param se não tiver. O `scripts/upstream-skill.py` resolve o caminho da cópia instalada, que carrega a versão e por isso não pode ser fixado.
+As duas primeiras **envolvem** o `to-spec` e o `to-tickets` do `mattpocock-skills` em vez de duplicá-los: leem o `SKILL.md` de lá e acrescentam o que só quem conhece o resto do fluxo sabe — o portão de modelagem antes do fatiamento, o ADR como entrada dos tickets, a issue pai que o checkpoint vai precisar, e referência de código por símbolo. O upstream segue se atualizando sem merge; em troca, as duas conferem se o arquivo lido ainda tem a forma que os adendos pressupõem e param se não tiver. O procedimento comum às duas vive em [`references/envolver-upstream.md`](./references/envolver-upstream.md).
 
 O `run` segue a filosofia *subagent-driven*: um subagent fresco por ticket (cada um foi dimensionado para uma janela limpa), estritamente sequencial — tickets são fatias verticais e colidem nos arquivos de junção, então paralelismo de implementação fica de fora por design. O orquestrador mantém um ledger de progresso e para apenas nos casos que exigem decisão humana (erro de spec de design, bloqueio).
 
-Na fila, **quem conta os cinco tickets do ciclo é o orquestrador, pelo ledger** — não o hook. O aviso do hook só alcança a sessão que entrou no fluxo pela invocação, e o subagent chega à `implement` lendo o arquivo; além disso o hook é infraestrutura da máquina, então numa máquina sem ele nenhum aviso chega. Um `CHECKPOINT_DUE` que volte confirma a contagem, e a ausência dele não diz nada. Em sessão manual (`/ticket:implement`) quem avisa continua sendo o hook, com conferência própria descrita no `references/checkpoint.md`.
+Na fila, **quem conta os cinco tickets do ciclo é o orquestrador, pelo ledger** — não o hook, que só alcança a sessão que entrou no fluxo pela invocação e é infraestrutura da máquina. Em sessão manual (`/ticket:implement`) quem avisa continua sendo o hook. O porquê de cada caso está nas próprias skills.
 
 ## O fluxo, em uma linha por passo
 
@@ -60,13 +60,13 @@ Antes da fila existir: **`/ticket:spec`** sintetiza a conversa em spec, e **`/ti
 Depois, por ticket:
 
 1. **Reivindicar** — bloqueadores primeiro (frontier), depois dono; ticket de outra pessoa para o fluxo.
-2. **Implementar** — escopo restrito ao ticket, `/tdd` nas costuras que o spec registrou.
+2. **Implementar** — escopo restrito ao ticket, `/tdd` nas costuras que o spec registrou. Ticket que cria escritor num campo governado por ADR também atualiza o ADR (`references/adr-escritor.md`).
 3. **Erro de spec** — factual corrige na hora; design registra, para o ticket e escala. Na dúvida, é design.
 4. **Verificar** — evidência antes de alegação.
-5. **Commit → review → amend** — a revisão só enxerga trabalho commitado; 1 ticket = 1 commit. Push é manual, fora do fluxo.
+5. **Commit → review → amend** — a revisão só enxerga trabalho commitado; 1 ticket = 1 commit, com três exceções marcadas no assunto (`docs:`, `achados de <sha>`, `refactor: checkpoint`). Push é manual, fora do fluxo.
 6. **Encerrar** — *feito* ≠ *fechado*: quem fecha issue é o merge, não o push.
 7. **Métrica** — cada erro de spec vira uma linha versionada em `spec-errors.md`.
-8. **Checkpoint** — a cada 5 tickets, o agent revisa o acumulado com um portão de materialidade: correções pequenas viram um `refactor:`; defeitos reais viram achados em quarentena no contêiner de checkpoint da demanda (pasta `checkpoint/` irmã de `issues/`; comentário na issue pai em modo tracker), sempre `needs-triage` — promover à fila é decisão humana, e a issue só nasce na promoção; inconsistências sem defeito viram linha num registro por checkpoint, que só sai de lá quando vira ticket; achados sobre o próprio processo viram proposta de mudança na skill, nunca ticket. A fila da feature converge para o escopo original. O procedimento fica em `skills/implement/references/checkpoint.md` (ciclo, disparo do agent, fechamento da tag) e `achados.md` ao lado (destino de cada achado, critério de promoção, dedup) — lidos só quando o checkpoint vence.
+8. **Checkpoint** — a cada 5 tickets, o agent revisa o acumulado com um portão de materialidade: correções pequenas viram um `refactor:`; defeitos reais viram achados em quarentena no contêiner de checkpoint da demanda (pasta `checkpoint/` irmã de `issues/`; comentário na issue pai em modo tracker), sempre `needs-triage` — promover à fila é decisão humana, e a issue só nasce na promoção; inconsistências sem defeito viram linha num registro por checkpoint, que só sai de lá quando vira ticket; achados sobre o próprio processo viram proposta de mudança na skill, nunca ticket. A fila da feature converge para o escopo original. O procedimento fica em `skills/implement/references/checkpoint.md` (ciclo, disparo do agent, fechamento da tag) e `achados.md` ao lado (destino de cada achado, critério de promoção, dedup) — lidos só quando o checkpoint vence, como os demais arquivos de `references/`.
 
 ## O ciclo de checkpoint
 

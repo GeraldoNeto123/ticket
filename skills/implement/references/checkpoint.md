@@ -76,9 +76,6 @@ que rodou sem a tag ter sido movida, e é por ela que o **próximo** checkpoint
 subtrai este commit do que vai revisar. Sem a palavra, o ciclo seguinte revisa a
 saída deste e reporta como achado novo o que você já classificou.
 
-Esse commit e os `docs:` do passo 3 da skill são exceções à regra de um commit
-por ticket.
-
 ## 3. O resto do relatório
 
 As listas 2, 3 e 4 têm destino próprio, e nenhuma delas entra na fila da feature.
@@ -98,15 +95,15 @@ caem no intervalo seguinte; o hook, que detecta ciclo pela metade procurando um
 em todo ciclo. Aviso que mente treina o operador a ignorar a única coisa que
 avisa quando o ciclo de fato ficou pela metade.
 
-Local, sempre. **Nunca publique:**
+A tag é local e se move no lugar:
 
 ```bash
 git tag -f "runbook-checkpoint-<slug>"
 ```
 
-A tag é um marcador de progresso pessoal, escopado ao seu e-mail. Ela não
-descreve nada do projeto, e nenhum outro desenvolvedor tem uso para ela.
-Publicá-la — e reescrevê-la com `push -f` a cada ciclo — faz o `git fetch` dos
+**Mantenha-a local.** Ela é um marcador de progresso pessoal, escopado ao seu
+e-mail: não descreve nada do projeto, e nenhum outro desenvolvedor tem uso para
+ela. Publicada — e reescrita com `push -f` a cada ciclo — faz o `git fetch` dos
 outros recusar com *"would clobber existing tag"*. Custo real para o time,
 benefício zero.
 
@@ -116,10 +113,10 @@ hook avisa e pergunta em vez de descartar o acumulado em silêncio.
 
 ## 5. Se a tag do ciclo não existir
 
-**Não a crie em silêncio quando o repo já usou o fluxo.** Tag ausente ali
-significa clone novo, outra máquina ou tag apagada, e nunca "o acumulado foi
-revisado". Tente `git fetch origin --tags` primeiro. Se ela não estiver no
-remoto, pergunte ao usuário se deve revisar o acumulado ou recomeçar do HEAD.
+**Repo que já usou o fluxo e está sem a tag: escale.** Tag ausente ali significa
+clone novo, outra máquina ou tag apagada, e nunca "o acumulado foi revisado".
+Tente `git fetch origin --tags` primeiro; se ela não estiver no remoto, pergunte
+ao usuário se deve revisar o acumulado ou recomeçar do HEAD.
 
 Num repo que está adotando o fluxo agora, o caso é outro e o hook já instrui:
 criar a tag no HEAD abre o primeiro ciclo, e o que veio antes fica de fora

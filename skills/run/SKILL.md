@@ -1,6 +1,6 @@
 ---
 name: run
-description: "Executa a fila de tickets de uma feature em sequência: um subagent fresco por ticket rodando /ticket:implement, ledger de progresso, checkpoint no orquestrador e escalada explícita — nada é descartado em silêncio."
+description: "Orquestra a fila de tickets de uma feature, um subagent fresco por ticket."
 disable-model-invocation: true
 ---
 
@@ -10,7 +10,9 @@ disable-model-invocation: true
 
 O argumento aponta o spec/preâmbulo da feature e onde vivem os tickets dela (diretório, rótulo ou issue-mãe). Você é o **orquestrador**: despacha um subagent fresco por ticket, sequencialmente, e nunca implementa nada você mesmo. Cada ticket foi dimensionado pelo `/to-tickets` para caber numa janela limpa — é o subagent que ganha essa janela; se a implementação acontecesse aqui, o terceiro ticket já rodaria sobre o contexto acumulado dos dois primeiros, exatamente o que o fluxo existe para evitar.
 
-Paralelismo é proibido nesta versão, por design: tickets são fatias verticais e colidem nos arquivos de junção (rotas, schema, registro de DI). Um de cada vez, sempre.
+Um ticket de cada vez, sempre: tickets são fatias verticais e colidem nos arquivos de junção (rotas, schema, registro de DI), então paralelismo de implementação fica de fora por design.
+
+**Escalar**, onde este arquivo disser, é parar a fila e entregar a decisão ao usuário — nunca seguir com um palpite.
 
 ## 1. Montar a fila
 
@@ -31,7 +33,7 @@ O ledger é seu mapa de recuperação: os SHAs que ele nomeia existem no git mes
 - **Sem commit e sem `done`** — execução normal, dispatch como sempre.
 - **Com commit e sem `done`** — **retomada**. O trabalho existe; reimplementá-lo produz um segundo commit do mesmo ticket e joga fora o primeiro. O dispatch precisa dizer isso na primeira linha: *não reimplemente; o commit `<sha>` já entrega este ticket; confira-o, retome do passo em que parou e use `<sha>^` como ponto fixo da revisão do passo 5*. Sem o ponto fixo explícito, a revisão do subagent diffa contra o lugar errado e passa em branco.
 - **`done`** — sai da frontier, não vira dispatch.
-- **Ambíguo** — o commit toca mais do que o ticket, há mais de um commit para ele, ou não existe ledger porque a sessão morreu antes de criá-lo: **pare e pergunte.** Aqui é onde menos se sabe o que aconteceu com o repositório, e portanto a pior hora para adivinhar. Marcar como `done` um ticket cuja revisão nunca rodou custa tanto quanto reimplementar por cima.
+- **Ambíguo** — o commit toca mais do que o ticket, há mais de um commit para ele, ou não existe ledger porque a sessão morreu antes de criá-lo: **escale.** Aqui é onde menos se sabe o que aconteceu com o repositório, e portanto a pior hora para adivinhar. Marcar como `done` um ticket cuja revisão nunca rodou custa tanto quanto reimplementar por cima.
 
 Reconciliado, registre no ledger o que você concluiu de cada um antes de despachar — a reconciliação também é trabalho que se perde se a sessão cair de novo.
 
@@ -43,7 +45,7 @@ Primeiro, resolva o caminho da skill `implement`. Ela mora ao lado desta, em `<d
 
 O caminho carrega a versão do plugin (`.../ticket/<versão>/skills/...`). Um `plugin update` no meio da fila poda o diretório da versão antiga: o caminho que você resolveu no primeiro ticket morre sem aviso, e os dispatches seguintes mandam o subagent ler um arquivo que não está mais lá. Já aconteceu.
 
-Se sumiu, **não tente re-resolver pelo diretório-base que veio no cabeçalho** — ele aponta para a mesma pasta podada e está tão morto quanto. Ache a versão nova por fora do plugin:
+Se sumiu, ache a versão nova **por fora do plugin** — o diretório-base que veio no cabeçalho aponta para a mesma pasta podada e está tão morto quanto:
 
 ```bash
 # rota primária: o manifesto diz exatamente qual versão está instalada
@@ -55,7 +57,7 @@ ls -d ~/.claude/plugins/cache/ticket/ticket/*/skills/implement/SKILL.md | sort -
 
 O `sort -V` não é preciosismo: em ordem alfabética `1.10.1` vem **antes** de `1.9.0`, então `ls | tail -1` devolve a versão velha com cara de resposta certa — e o resto da fila roda contra instruções desatualizadas sem nada acusar.
 
-Achou: siga com o caminho novo e anote no ledger que a versão trocou no meio da fila. Não achou: pare e pergunte, em vez de despachar sem instruções.
+Achou: siga com o caminho novo e anote no ledger que a versão trocou no meio da fila. Não achou: **escale** — despachar sem instruções é pior do que parar a fila.
 
 O subagent **lê esse arquivo, não invoca a skill**: `implement` é porta de entrada humana (`disable-model-invocation`) e o Skill tool recusa invocação vinda de modelo — inclusive de subagents. Ler o arquivo entrega as mesmas instruções pelo caminho que a política permite, no padrão task-brief: "leia isto primeiro; são seus requisitos".
 
@@ -78,9 +80,9 @@ Status possíveis e o que fazer com cada um:
 
 - **`DONE`** — registre no ledger e siga para o próximo da frontier. Não pause para aprovação entre tickets: este é o modo autônomo; quem quer acompanhar de perto roda `/ticket:implement` à mão.
 - **`SPEC_DESIGN`** — o subagent encontrou erro de spec de design, registrou o conflito no ticket e parou (passo 3 da implement). A skill de lá manda escalar para "uma sessão de effort alto apontada para esse registro" — **essa sessão é esta**. Pare o loop, apresente o registro ao usuário e espere a decisão dele. Decidido, o ticket volta à frontier.
-- **`BLOCKED`** — dono alheio, dependência externa, ou o subagent travou sem progresso. Pare e pergunte ao usuário: bloqueio é informação, e a fila espera a resposta na ordem em que está.
+- **`BLOCKED`** — dono alheio, dependência externa, ou o subagent travou sem progresso. **Escale:** bloqueio é informação, e a fila espera a resposta na ordem em que está.
 
-- **Qualquer outra coisa** — retorno fora do contrato, subagent que morreu, erro não classificado. Trate como `BLOCKED`: registre no ledger o que voltou **literalmente**, sem interpretar, e pare para perguntar. Um retorno que você não reconhece é a situação em que menos se sabe o que aconteceu com o repositório, e portanto a pior hora para adivinhar um status e seguir. Reexecutar o ticket também não é decisão sua: o subagent pode ter commitado antes de morrer.
+- **Qualquer outra coisa** — retorno fora do contrato, subagent que morreu, erro não classificado. Trate como `BLOCKED`: registre no ledger o que voltou **literalmente**, sem interpretar, e **escale**. Um retorno que você não reconhece é a situação em que menos se sabe o que aconteceu com o repositório, e portanto a pior hora para adivinhar um status e seguir. Reexecutar o ticket também é decisão do usuário: o subagent pode ter commitado antes de morrer.
 
 Todo desfecho — inclusive os ruins — vira linha no ledger. Descarte silencioso é proibido: um ticket que "sumiu" da fila é um bug seu.
 

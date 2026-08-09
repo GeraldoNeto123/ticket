@@ -27,11 +27,10 @@ arquivo ↔ comentário:
 Nos dois modos o status de nascença é **sempre** `needs-triage`, nunca
 `ready-for-agent`. Promover achado a item de fila é decisão humana, via triagem.
 
-**Se a demanda não tem issue pai, pare e pergunte.** O `/to-tickets` trata o
-`## Parent` como opcional, então o caso é real. Não crie o pai por conta própria:
-inventar estrutura no tracker de alguém é surpresa, e como a demanda se organiza
-é decisão do usuário. Reporte os achados no encerramento para não perdê-los
-enquanto ele decide.
+**Se a demanda não tem issue pai, escale.** O `/to-tickets` trata o `## Parent`
+como opcional, então o caso é real. A criação do pai é do usuário: inventar
+estrutura no tracker de alguém é surpresa, e como a demanda se organiza é decisão
+dele. Reporte os achados no encerramento para não perdê-los enquanto ele decide.
 
 ### Critério de promoção
 
@@ -55,6 +54,10 @@ buraco que ele fecha.
 
 O teste (2) é o que separa estrutura de gosto, e é por ele que a âncora precisa
 ser exata. Recorrência é contagem, não impressão.
+
+É a mesma **âncora** que o spec e os tickets escrevem no lugar de `arquivo:linha`
+— identidade que sobrevive ao código se mexer. Lá ela serve para reencontrar o
+alvo; aqui, para tornar recorrência contável. Um conceito, dois usos.
 
 ### A busca de duplicata é sua
 
