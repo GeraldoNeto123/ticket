@@ -40,9 +40,12 @@ mensagem:
 refactor: checkpoint <sha..sha> — <resumo>
 ```
 
-A palavra importa: é por ela que o hook detecta um checkpoint que rodou sem a tag
-ter sido movida. Esse commit e os `docs:` do passo 3 são as exceções à regra de um
-commit por ticket.
+A palavra importa, e por dois motivos: é por ela que o hook detecta um checkpoint
+que rodou sem a tag ter sido movida, e é por ela que o **próximo** checkpoint
+subtrai este commit do que vai revisar. Sem a palavra, o ciclo seguinte revisa a
+saída deste e reporta como achado novo o que você já classificou. O mesmo vale
+para o `docs(checkpoint):` do passo 4. Esse commit e os `docs:` do passo 3 são as
+exceções à regra de um commit por ticket.
 
 ## 3. Defeitos reais → achado **fora da fila**
 
@@ -143,6 +146,12 @@ Uma linha cada, no mesmo contêiner da demanda e **agrupadas por intervalo**. Va
 Sem inconsistência nenhuma, não crie nada. Não abrem arquivo de achado nem issue —
 são memória para a triagem humana e para o dedup do próximo checkpoint, que já as
 alcança pelas buscas acima.
+
+Em modo arquivo, o que os passos 3 e 4 escreveram entra num commit de assunto
+`docs(checkpoint): <resumo>` — **um só**, cobrindo achados e registro. O prefixo
+é o que faz o próximo ciclo subtrair este commit do conjunto que revisa, pelo
+mesmo motivo que a palavra `checkpoint` cumpre no commit do passo 2. Em modo
+tracker não há commit: achado e registro são comentários na issue pai.
 
 Uma entrada dessas sai por **um único motivo: ter virado ticket** — e quem a
 remove é o humano que a promoveu na triagem, nunca você e nunca o checkpoint
