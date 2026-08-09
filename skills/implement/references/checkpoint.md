@@ -11,12 +11,22 @@ acumulado — que só está completo quando o commit deste ticket está.
 
 ## 1. Disparar a revisão
 
-Dispare o agent `checkpoint-reviewer` passando duas coisas:
+Dispare o agent `checkpoint-reviewer` passando três coisas:
 
 - o intervalo, exatamente como o aviso o nomeou (tipicamente
   `runbook-checkpoint-<slug>..HEAD`);
 - **onde vivem os tickets e o spec** — o diretório, em modo arquivo; o
-  repo/projeto e o CLI de leitura, em modo tracker.
+  repo/projeto e o CLI de leitura, em modo tracker;
+- **o lote** — a referência de cada ticket fechado no intervalo com o SHA do
+  commit que o entregou. Num `/ticket:run`, o ledger já tem as duas colunas por
+  linha; numa sessão manual, `git log --oneline <intervalo>` dá a lista, e em
+  tracker o trailer `Closes #<n>` nomeia a issue de cada commit.
+
+O lote é o que o revisor não consegue reconstruir tão bem quanto você: sem ele
+sabe *que* código mudou, não *a mando de qual ticket*. É a diferença entre um
+achado que atravessa três tickets do lote e um que não atravessa nenhum — código
+que o intervalo passou perto sem tocar, que ele marca `fora do lote` no
+relatório. Débito antigo entra por aí, e é você quem decide o que fazer com ele.
 
 Ele devolve um relatório em quatro listas e não altera nada. O que fazer com cada
 lista é o resto deste arquivo.
@@ -118,7 +128,7 @@ Se já existe: acrescente ao registro existente o que o novo checkpoint adiciona
 **Status:** needs-triage
 
 ---
-Origem: checkpoint-reviewer · intervalo `<sha..sha>`
+Origem: checkpoint-reviewer · intervalo `<sha..sha>` · atravessa <tickets do lote, ou `fora do lote`>
 ```
 
 ## 4. Inconsistências sem defeito → registro
