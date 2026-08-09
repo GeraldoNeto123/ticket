@@ -91,6 +91,36 @@ Nos dois modos o status de nascença é **sempre** `needs-triage` — nunca
 `ready-for-agent`: promover achado a item de fila é decisão humana, via triagem,
 não sua.
 
+### Critério de promoção
+
+A quarentena só serve se a saída dela tiver régua. Sem régua, promover vira
+decisão de gosto tomada com a fila à vista — e a fila cresce: numa etapa real,
+49 tickets viraram 88, com 37 nascendo **depois** do veredito de fechamento, e
+apenas 4 dos 88 morreram `wontfix`, num desenho cujo pressuposto é que a maioria
+morre ali.
+
+Um achado sai da quarentena e vira ticket numerado **só** se:
+
+1. **produz dado errado para o cliente** — um caminho alcançável que grava,
+   apaga ou exibe valor incorreto. O teste é "alguém sofre o efeito", não
+   "poderia ser melhor"; **ou**
+2. **já recorreu** — a mesma âncora aparece no registro de **dois checkpoints
+   diferentes**.
+
+Todo o resto morre `wontfix` **no ato da triagem**, e a entrada permanece onde
+está.
+
+O teste (2) é o que separa estrutura de gosto, e é por ele que a âncora precisa
+ser exata: recorrência é contagem, não impressão. Na etapa 6 ele teria promovido
+"decide pela cópia pré-lock" (4 recorrências) e "escritor apaga campo que não
+conhece" (2, em colunas diferentes) — as duas famílias que motivaram um ADR — sem
+promover "quatro estilos de classificação de erro do SDK", que apareceu uma vez e
+nunca produziu dado errado.
+
+Quando for você a triar, é esta a régua e não há terceira porta: achado que não
+passa em (1) nem em (2) você marca `wontfix` e deixa onde está. Propor promoção
+fora do critério reabre exatamente o buraco que ele fecha.
+
 Antes de criar, confirme a duplicata você mesmo — sempre sobre **todos** os
 contêineres, nunca só o da demanda da vez:
 
@@ -147,17 +177,19 @@ Sem inconsistência nenhuma, não crie nada. Não abrem arquivo de achado nem is
 são memória para a triagem humana e para o dedup do próximo checkpoint, que já as
 alcança pelas buscas acima.
 
-Em modo arquivo, o que os passos 3 e 4 escreveram entra num commit de assunto
+Em modo arquivo, o que os §3 e §4 escreveram entra num commit de assunto
 `docs(checkpoint): <resumo>` — **um só**, cobrindo achados e registro. O prefixo
 é o que faz o próximo ciclo subtrair este commit do conjunto que revisa, pelo
 mesmo motivo que a palavra `checkpoint` cumpre no commit do passo 2. Em modo
 tracker não há commit: achado e registro são comentários na issue pai.
 
-Uma entrada dessas sai por **um único motivo: ter virado ticket** — e quem a
-remove é o humano que a promoveu na triagem, nunca você e nunca o checkpoint
-seguinte. Não há expiração por idade, por volume nem por "parecer obsoleta":
-entrada antiga que ninguém resolveu é precisamente o que o registro existe para
-manter à vista. Encontrar entradas repetidas de checkpoints anteriores é o
+Uma entrada dessas sai por **um único motivo: ter virado ticket pelo critério de
+promoção do §3** — e quem a remove é o humano que a promoveu na triagem, nunca
+você e nunca o checkpoint seguinte. Não há expiração por idade, por volume nem
+por "parecer obsoleta": entrada antiga que ninguém resolveu é precisamente o que
+o registro existe para manter à vista, e é ela que torna o teste (2) do critério
+contável — expurgar por idade apagaria a evidência de recorrência antes de a
+segunda ocorrência chegar. Encontrar entradas repetidas de checkpoints anteriores é o
 funcionamento esperado, não sujeira a limpar. O rastro sobrevive do outro lado —
 o ticket promovido carrega a origem do achado.
 
@@ -174,6 +206,15 @@ spec/plano/ADR (documento), um achado que é documento vai para `docs/`, não pa
 tracker.
 
 ## 7. Fechar o ciclo: mover a tag
+
+**Depois dos commits que este checkpoint produziu** — o `refactor: checkpoint` do
+§2 e o `docs(checkpoint):` do §4. A ordem das seções acima é a ordem de execução,
+e a tag é o último passo por uma razão que se observa: movida antes, os commits
+do próprio ciclo caem no intervalo seguinte, e o hook, que detecta ciclo pela
+metade procurando um `refactor: checkpoint` **depois** da tag, passa a acusar
+"a tag não foi movida" em todo ciclo — um aviso falso sobre um ciclo que fechou
+certo. Aviso que mente é pior do que aviso ausente: ele treina o operador a
+ignorar a única coisa que avisa quando o ciclo de fato ficou pela metade.
 
 Local, sempre. **Nunca publique:**
 

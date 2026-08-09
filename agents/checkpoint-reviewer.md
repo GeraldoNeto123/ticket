@@ -29,7 +29,7 @@ git log --reverse --format='%H %s' --no-merges \
 ```
 
 - **`--author` e `--no-merges`** — o ciclo é escopado por operador, mas o intervalo não: um `pull` no meio da fila põe o trabalho do time inteiro entre a tag e o `HEAD`. Revisar isso é auditar o repositório dos outros com o orçamento do checkpoint.
-- **Os commits do próprio checkpoint** — o `refactor: checkpoint` do §2 e o `docs(checkpoint):` do §4 são a saída do ciclo anterior. Sem a subtração, você revisa o que um checkpoint decidiu e reporta como achado novo o que ele já classificou.
+- **Os commits do próprio checkpoint** — `refactor: checkpoint …` e `docs(checkpoint): …` são a saída do ciclo anterior: correções aplicadas e achados registrados. Sem a subtração, você revisa o que um checkpoint decidiu e reporta como achado novo o que ele já classificou.
 
 Revise commit a commit (`git show <sha>`), na ordem: é assim que se vê **quem** fez o quê, que é a matéria-prima de um problema entre tickets. Procure exclusivamente problemas **entre** tickets — o que nenhuma revisão de ticket isolado poderia ver:
 
