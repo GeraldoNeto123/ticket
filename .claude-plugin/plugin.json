@@ -1,6 +1,6 @@
 {
   "name": "ticket",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Complementos ao fluxo do mattpocock-skills: portão de estado compartilhado antes do fatiamento, checkpoint de consistência a cada 5 tickets e orquestrador autônomo da fila.",
   "author": {
     "name": "Geraldo Neto",

@@ -51,7 +51,7 @@ Para cada ticket da frontier, despache **um** subagent com o brief abaixo, preen
 
 > Implemente o ticket `<referência>`, em `<caminho ou nº>`. Spec em `<caminho>`. Leia ambos antes de qualquer coisa, e também `CONTEXT.md` e os ADRs de `docs/adr/` que tocarem a área. Escopo restrito ao ticket: excedente vira ticket novo, não código.
 >
-> Use a skill `mattpocock-skills:tdd` nas costuras nomeadas no spec. Enquanto trabalha, rode só typecheck e os testes do arquivo; a suíte completa roda **uma vez**, no fim.
+> Use a skill `mattpocock-skills:tdd` nas costuras nomeadas no spec. Enquanto trabalha, rode só typecheck e os testes do arquivo. Ao fim, rode a suíte completa **uma vez** — a menos que o repo declare cadência própria (ex.: `docs/agents/testing.md` ou seção do `CLAUDE.md`); havendo declaração, siga-a no lugar desta regra default.
 >
 > Anote o SHA do `HEAD`, commite, revise com a skill `mattpocock-skills:code-review` usando esse SHA como ponto fixo e aplique o que couber via `--amend`. **Um ticket = um commit.**
 >
@@ -78,10 +78,12 @@ Todo desfecho — inclusive os ruins — vira linha no ledger. Descarte silencio
 
 Vencido, **invoque a skill `ticket:checkpoint`** — aqui no orquestrador, nunca num subagent. O checkpoint é seu por dois motivos: subagent não despacha agent, e as duas entradas que a skill precisa só você tem — o intervalo (o SHA da última linha de checkpoint do ledger) e o lote (referência + SHA das linhas do ciclo).
 
+Se o repo declarar (passo 3) que a suíte completa fica reservada pro checkpoint em vez de rodar por ticket, é aqui — no orquestrador, antes de invocar a skill — que ela roda; a `ticket:checkpoint` é estritamente leitura e não executa teste nenhum.
+
 Registre o resultado em linha própria no ledger e siga. Achados novos vão para o contêiner de checkpoint da demanda, fora da fila, e nascem `needs-triage`: **nunca** entram nesta frontier. A frontier é a foto do início da fila; quem a amplia é o usuário, via triagem, nunca o checkpoint.
 
 ## 4. Encerramento
 
-Frontier vazia = fila encerrada. Se o último lote não fechou um ciclo de checkpoint, invoque a `ticket:checkpoint` uma última vez antes do resumo — fila encerrada com acumulado não revisado é trabalho pela metade.
+Frontier vazia = fila encerrada. Se o último lote não fechou um ciclo de checkpoint, invoque a `ticket:checkpoint` uma última vez antes do resumo — fila encerrada com acumulado não revisado é trabalho pela metade. Se a cadência declarada pelo repo (passo 3) reserva a suíte completa pro checkpoint, rode-a aqui também, cobrindo o que fechou depois do último ciclo.
 
 Monte o resumo final **a partir do ledger**, não de memória: tickets concluídos com SHAs, observações acumuladas, achados registrados pelos checkpoints, e o que ficou bloqueado ou aguardando decisão. Se sobraram tickets inalcançáveis (bloqueador nunca resolvido, ciclo de dependência), aponte-os explicitamente — são a primeira coisa que o usuário precisa destravar.
