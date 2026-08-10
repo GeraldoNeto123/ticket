@@ -1,9 +1,7 @@
 # O que fazer com os achados do checkpoint
 
-Você chega aqui pelo §3 do [`checkpoint.md`](checkpoint.md), com as listas 2, 3 e
-4 do relatório em mãos. Nenhuma delas entra na fila da feature.
-
-Feito o que está aqui, volte ao §4 de lá para mover a tag.
+Você chega aqui pelo §4 da `/ticket:checkpoint`, com as listas 2, 3 e 4 do
+relatório em mãos. Nenhuma delas entra na fila da feature.
 
 ## Defeitos reais → achado fora da fila
 
@@ -80,6 +78,19 @@ São duas etapas porque **nenhum dos dois CLIs procura dentro de comentário** �
 `--search` cobre título e descrição, e só. Listar os pais pelo rótulo e ler os
 comentários funciona igual nas duas plataformas.
 
+**Varra também os tickets já fechados, não só os contêineres de checkpoint:**
+
+```bash
+grep -ril "<âncora>" .scratch/*/issues/
+```
+
+Um ticket `done` cuja âncora bate pode ser exatamente este achado, já decidido —
+risco aceito com justificativa, comportamento provado por teste e mantido. Leia o
+ticket antes de criar qualquer coisa: achado que reabre decisão registrada não é
+achado, é a decisão sendo esquecida. Numa etapa real, o dedup contra os tickets
+matou um "defeito" que era risco residual aceito, documentado e testado num
+ticket fechado da mesma área.
+
 O achado mora na demanda, mas a busca varre todas. É essa separação que dá escopo
 sem perder memória: um intervalo de commits atravessa duas features com
 frequência, e o dedup que enxergasse só a feature da vez reabriria o mesmo achado
@@ -123,8 +134,10 @@ mais tempo para deixar de corresponder.
 - **Modo tracker:** um comentário na issue pai, um por checkpoint, com o
   intervalo no cabeçalho.
 
-Sem inconsistência nenhuma, não crie nada. Elas não abrem arquivo de achado nem
-issue: são memória para a triagem humana e para o dedup do próximo checkpoint.
+Sem inconsistência nenhuma, só crie o registro se ele for o único marcador do
+ciclo — o caso "sem achados" do §4 da `/ticket:checkpoint`. Inconsistências não
+abrem arquivo de achado nem issue: são memória para a triagem humana e para o
+dedup do próximo checkpoint.
 
 Uma entrada dessas sai por **um único motivo: ter virado ticket pelo critério de
 promoção**, e quem a remove é o humano que a promoveu. Entrada antiga que ninguém
@@ -137,8 +150,8 @@ checkpoints anteriores são o funcionamento esperado.
 
 Em modo arquivo, achados e registro entram num commit só, de assunto
 `docs(checkpoint): <resumo>`. O prefixo é o que faz o próximo ciclo subtrair este
-commit do conjunto que revisa, pelo mesmo motivo que a palavra `checkpoint`
-cumpre no commit de correções pequenas.
+commit do conjunto que revisa — e é um dos dois marcadores pelos quais o §1
+encontra onde o ciclo anterior terminou.
 
 Antes de commitar, confirme que o caminho é versionável:
 

@@ -1,22 +1,49 @@
 # ticket
 
-Plugin do Claude Code com o fluxo **`/ticket:implement`**: implementação disciplinada de um ticket por sessão — reivindicação, escopo sagrado, TDD, protocolo de erro de spec, commit → review → amend e um checkpoint de consistência automático a cada 5 tickets.
+Plugin do Claude Code que **complementa** o fluxo de tickets do
+[`mattpocock-skills`](https://github.com/mattpocock/skills) em vez de envolvê-lo:
+as skills dele rodam puras, e este plugin acrescenta só o que aquele fluxo não
+tem — a passada de estado compartilhado antes do fatiamento, o checkpoint de
+consistência entre tickets e o orquestrador autônomo da fila.
+
+## O fluxo
+
+```
+1. /grill-with-docs                  (mattpocock)  ─┐
+2. /prototype + /handoff             (mattpocock)   │  uma janela só
+3. /to-spec                          (mattpocock)   │
+4. /ticket:estado-compartilhado      (este plugin)  │  ← passada ortogonal, produz ADR
+5. /to-tickets                       (mattpocock)  ─┘  ← consome o ADR do passo 4
+
+   ────────── /clear ──────────
+
+6a. manual:    /implement <ticket>    (mattpocock)  → /clear → próximo
+6b. autônomo:  /ticket:run <feature>  (este plugin) → um subagent fresco por ticket,
+                                                      /ticket:checkpoint a cada 5
+```
+
+A única dependência do upstream é o **nome público** das skills
+(`mattpocock-skills:tdd`, `mattpocock-skills:code-review`,
+`mattpocock-skills:domain-modeling`), que é interface estável.
 
 ## O que vem no pacote
 
 | Componente | O que faz |
 |---|---|
-| Skill `spec` | `/ticket:spec` — segue o `to-spec` do `mattpocock-skills` e acrescenta o que este fluxo consome depois: costuras registradas de forma que uma sessão nova ache, e referência de código por símbolo |
-| Skill `split` | `/ticket:split <spec>` — roda o portão de modelagem (campo → escritores por fluxo, conflito vira ADR) e só então segue o `to-tickets`, com o ADR como entrada |
-| Skill `implement` | O fluxo em 8 passos, invocado com `/ticket:implement <ticket>` |
-| Skill `run` | Orquestrador da fila: `/ticket:run <spec/feature>` executa os tickets da frontier em sequência, um subagent fresco por ticket, com ledger de progresso e escalada explícita |
+| Skill `estado-compartilhado` | `/ticket:estado-compartilhado <spec>` — entre o `/to-spec` e o `/to-tickets`: mapeia campo → escritores por fluxo e resolve conflito de escritor em ADR. O fatiamento corta por comportamento visível e nunca faz essa passada; numa etapa real de 64 tickets, 7 tinham conflito de escritor e todos passaram na própria revisão |
+| Skill `checkpoint` | `/ticket:checkpoint` — a cada 5 tickets, dispara o agent revisor sobre o acumulado, aplica correções pequenas num `refactor: checkpoint` e roteia achados para quarentena fora da fila, com critério de promoção explícito |
+| Skill `run` | `/ticket:run <spec/feature>` — orquestrador da fila: executa a frontier em sequência, um subagent fresco por ticket com brief inline, ledger de progresso retomável e escalada explícita; invoca a `checkpoint` a cada ciclo |
 | Agent `checkpoint-reviewer` | Revisão de consistência **entre** tickets acumulados (Opus, effort high) — o olhar que nenhuma sessão isolada tem |
-| Hook `runbook-checkpoint.py` | PostToolUse em todo `git commit`: abre o primeiro ciclo, conta os commits de ticket do operador e avisa quando o checkpoint vence. Registrado automaticamente na instalação do plugin |
 | Hook `referencias-de-linha.py` | PostToolUse em todo `Write`/`Edit` de `.md`: acusa documento que nasce com âncora `arquivo:linha`, que envelhece a cada ticket. Aviso, não bloqueio; silencioso fora dos repos que usam o fluxo |
+
+O ciclo de checkpoint é delimitado pelos próprios commits que ele deixa no
+histórico (`refactor: checkpoint ...` / `docs(checkpoint): ...`) — sem tag, sem
+hook contador: os marcadores viajam com o clone. Numa fila, quem conta os cinco
+tickets é o orquestrador, pelo ledger.
 
 ## Pré-requisitos
 
-1. **Plugin `mattpocock-skills`** — o `/tdd`, o `code-review`, o `domain-modeling` e os `to-spec`/`to-tickets` que as skills `spec` e `split` envolvem vêm dele:
+1. **Plugin `mattpocock-skills`**:
 
    ```
    /plugin marketplace add mattpocock/skills
@@ -29,7 +56,18 @@ Plugin do Claude Code com o fluxo **`/ticket:implement`**: implementação disci
    /setup-matt-pocock-skills
    ```
 
-   Isso cria `docs/agents/issue-tracker.md` (onde os tickets vivem: arquivos `.md`, GitHub, GitLab...) e o vocabulário de rótulos que a skill consulta.
+   Isso cria `docs/agents/issue-tracker.md` (onde os tickets vivem: arquivos
+   `.md`, GitHub, GitLab...) e o vocabulário de rótulos que as skills consultam.
+
+3. **Duas regras no `CLAUDE.md` do projeto** — elas valem também na sessão
+   manual (`/implement` puro), que nenhuma skill deste plugin embala:
+
+   - **Commit → review → amend, nesta ordem.** O `code-review` diffa
+     `<ponto-fixo>...HEAD` e só enxerga trabalho commitado; 1 ticket = 1 commit,
+     achados aplicados via `--amend` (conferindo `git log @{u}..HEAD` antes).
+   - **Critério de aceite sobre um conjunto não se verifica pelo ramo editado.**
+     "Sempre", "nenhum", "um único" exigem enumerar os caminhos — o ADR que
+     mapeia os escritores é a lista, o `grep` fecha o resto.
 
 ## Instalação
 
@@ -41,44 +79,28 @@ Plugin do Claude Code com o fluxo **`/ticket:implement`**: implementação disci
 Reinicie a sessão (ou `/reload-plugins`) e invoque:
 
 ```
-/ticket:spec                                               # a conversa vira spec
-/ticket:split <spec>                                       # portão de modelagem e então a fila de tickets
-/ticket:implement <número da issue ou caminho do ticket>   # um ticket, modo assistido
-/ticket:run <spec/feature>                                 # a fila inteira, modo autônomo
+/ticket:estado-compartilhado <spec>   # entre o /to-spec e o /to-tickets
+/ticket:run <spec/feature>            # a fila inteira, modo autônomo
+/ticket:checkpoint                    # o acumulado de sessões manuais, a cada 5 tickets
 ```
 
-As duas primeiras **envolvem** o `to-spec` e o `to-tickets` do `mattpocock-skills` em vez de duplicá-los: leem o `SKILL.md` de lá e acrescentam o que só quem conhece o resto do fluxo sabe — o portão de modelagem antes do fatiamento, o ADR como entrada dos tickets, a issue pai que o checkpoint vai precisar, e referência de código por símbolo. O upstream segue se atualizando sem merge; em troca, as duas conferem se o arquivo lido ainda tem a forma que os adendos pressupõem e param se não tiver. O procedimento comum às duas vive em [`references/envolver-upstream.md`](./references/envolver-upstream.md).
+O `run` segue a filosofia *subagent-driven*: um subagent fresco por ticket (cada
+um foi dimensionado para uma janela limpa), estritamente sequencial — tickets são
+fatias verticais e colidem nos arquivos de junção, então paralelismo de
+implementação fica de fora por design. O orquestrador mantém um ledger de
+progresso e para apenas nos casos que exigem decisão humana (erro de spec de
+design, bloqueio).
 
-O `run` segue a filosofia *subagent-driven*: um subagent fresco por ticket (cada um foi dimensionado para uma janela limpa), estritamente sequencial — tickets são fatias verticais e colidem nos arquivos de junção, então paralelismo de implementação fica de fora por design. O orquestrador mantém um ledger de progresso e para apenas nos casos que exigem decisão humana (erro de spec de design, bloqueio).
+## O checkpoint, em uma linha por destino
 
-Na fila, **quem conta os cinco tickets do ciclo é o orquestrador, pelo ledger** — não o hook, que só alcança a sessão que entrou no fluxo pela invocação e é infraestrutura da máquina. Em sessão manual (`/ticket:implement`) quem avisa continua sendo o hook. O porquê de cada caso está nas próprias skills.
-
-## O fluxo, em uma linha por passo
-
-Antes da fila existir: **`/ticket:spec`** sintetiza a conversa em spec, e **`/ticket:split`** roda o portão de modelagem — mapa de campo → escritores por fluxo, conflito virando ADR — antes de fatiar. O portão existe porque fatiar por comportamento visível é a fatia certa para entregar valor e mesmo assim deixa passar o conflito de escritor: numa etapa real de 64 tickets, sete tinham essa forma, e nenhum foi falha de implementação — cada um passou na própria revisão. Ele tem critério de entrada: etapa que não escreve em estado compartilhado por mais de um fluxo pula o portão e diz isso.
-
-Depois, por ticket:
-
-1. **Reivindicar** — bloqueadores primeiro (frontier), depois dono; ticket de outra pessoa para o fluxo.
-2. **Implementar** — escopo restrito ao ticket, `/tdd` nas costuras que o spec registrou. Ticket que cria escritor num campo governado por ADR também atualiza o ADR (`references/adr-escritor.md`).
-3. **Erro de spec** — factual corrige na hora; design registra, para o ticket e escala. Na dúvida, é design.
-4. **Verificar** — evidência antes de alegação.
-5. **Commit → review → amend** — a revisão só enxerga trabalho commitado; 1 ticket = 1 commit, com três exceções marcadas no assunto (`docs:`, `achados de <sha>`, `refactor: checkpoint`). Push é manual, fora do fluxo.
-6. **Encerrar** — *feito* ≠ *fechado*: quem fecha issue é o merge, não o push.
-7. **Métrica** — cada erro de spec vira uma linha versionada em `spec-errors.md`.
-8. **Checkpoint** — a cada 5 tickets, o agent revisa o acumulado com um portão de materialidade: correções pequenas viram um `refactor:`; defeitos reais viram achados em quarentena no contêiner de checkpoint da demanda (pasta `checkpoint/` irmã de `issues/`; comentário na issue pai em modo tracker), sempre `needs-triage` — promover à fila é decisão humana, e a issue só nasce na promoção; inconsistências sem defeito viram linha num registro por checkpoint, que só sai de lá quando vira ticket; achados sobre o próprio processo viram proposta de mudança na skill, nunca ticket. A fila da feature converge para o escopo original. O procedimento fica em `skills/implement/references/checkpoint.md` (ciclo, disparo do agent, fechamento da tag) e `achados.md` ao lado (destino de cada achado, critério de promoção, dedup) — lidos só quando o checkpoint vence, como os demais arquivos de `references/`.
-
-## O ciclo de checkpoint
-
-A tag que ancora o ciclo é escopada por operador (`runbook-checkpoint-<slug do e-mail do git>`), e o hook conta apenas commits do próprio autor — mais de uma pessoa pode rodar o fluxo no mesmo repo sem sobrescrever o ciclo alheio.
-
-O hook cuida do ciclo de vida da tag inteiro, porque um checkpoint que depende de alguém lembrar de criar uma tag não é um checkpoint:
-
-- **Primeiro ciclo** — repo com `docs/agents/issue-tracker.md` e sem tag: o hook instrui a criação da tag no HEAD. Sem isso o contador nunca começava a contar, e o fluxo passava por funcionando.
-- **Tag legada** — repos anteriores ao escopo por operador seguem sendo contados pela tag sem sufixo enquanto o aviso de migração se repete. Falta de migração atrasa o checkpoint; não o cancela.
-- **Tag ausente num repo que já usou o fluxo** — o hook para e manda perguntar, em vez de recriar a tag e dar o acumulado por revisado.
-
-O hook filtra `git commit` pelo comando literal, dentro do próprio script, e não pelo campo `if` do `hooks.json`: aquele campo usa sintaxe de regra de permissão, que não enxerga dentro de comando composto (`git add -A && git commit ...`) nem de substituição `$(...)` — as duas formas mais comuns de commitar.
+Correções pequenas viram um `refactor:`; defeitos reais viram achados em
+quarentena no contêiner de checkpoint da demanda (pasta `checkpoint/` irmã de
+`issues/`; comentário na issue pai em modo tracker), sempre `needs-triage` —
+promover à fila é decisão humana, a issue só nasce na promoção, e o critério de
+promoção é explícito: produz dado errado para o cliente, ou recorreu em dois
+checkpoints; inconsistências sem defeito viram linha num registro por checkpoint;
+achados sobre o próprio processo viram proposta de mudança na skill, nunca
+ticket. A fila da feature converge para o escopo original.
 
 ## Licença
 

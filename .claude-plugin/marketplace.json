@@ -4,12 +4,12 @@
     "name": "Geraldo Neto",
     "url": "https://github.com/GeraldoNeto123"
   },
-  "description": "Marketplace de plugin único: o fluxo /ticket:implement de implementação de tickets.",
+  "description": "Marketplace de plugin único: complementos ao fluxo de tickets do mattpocock-skills.",
   "plugins": [
     {
       "name": "ticket",
       "source": "./",
-      "description": "Fluxo de implementação de tickets: reivindicação, implementação escopada com TDD, protocolo de erro de spec, commit → review → amend e checkpoint de consistência a cada 5 tickets.",
+      "description": "Complementos ao fluxo do mattpocock-skills: portão de estado compartilhado antes do fatiamento, checkpoint de consistência a cada 5 tickets e orquestrador autônomo da fila.",
       "category": "engineering",
       "keywords": [
         "tickets",

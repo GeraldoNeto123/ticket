@@ -2,14 +2,12 @@
 """Acusa documento do fluxo que nasce com âncora `arquivo:linha`.
 
 Roda como hook PostToolUse depois de todo `Write`/`Edit` em `.md`. A regra que
-ele checa já está escrita em cinco lugares — passo 2 da `/ticket:implement`,
-`references/checkpoint.md`, o agent `checkpoint-reviewer` e as duas skills que
-produzem spec e tickets — e vazou assim mesmo: numa feature real, três
-checkpoints seguidos gastaram correções pequenas com âncoras deslocadas, e o
-documento que mais doeu (um contrato lido por outro time) foi escrito por uma
-sessão que não rodava skill nenhuma. Instrução não alcança quem não a lê;
-checagem alcança — e é por isso que este hook existe em vez de uma sexta
-instrução.
+ele checa está escrita nas skills e no agent do plugin — e vazou assim mesmo:
+numa feature real, três checkpoints seguidos gastaram correções pequenas com
+âncoras deslocadas, e o documento que mais doeu (um contrato lido por outro
+time) foi escrito por uma sessão que não rodava skill nenhuma. Instrução não
+alcança quem não a lê; checagem alcança — e é por isso que este hook existe em
+vez de mais uma instrução.
 
 Ele **não bloqueia**: quando roda, o arquivo já foi escrito. O aviso pede a
 troca por símbolo ou trecho antes de seguir, que é uma edição barata agora e um
@@ -24,8 +22,8 @@ import re
 import subprocess
 import sys
 
-# Marcador de que o repo adotou o fluxo — o mesmo que o `runbook-checkpoint.py`
-# usa. Sem esta guarda o hook opinaria sobre o markdown de qualquer projeto.
+# Marcador de que o repo adotou o fluxo. Sem esta guarda o hook opinaria sobre
+# o markdown de qualquer projeto.
 MARCADOR = os.path.join("docs", "agents", "issue-tracker.md")
 
 # A extensão é o que separa âncora de código de tudo o mais que tem dois-pontos
