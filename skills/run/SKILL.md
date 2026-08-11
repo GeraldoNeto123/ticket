@@ -12,7 +12,9 @@ O argumento aponta o spec/preâmbulo da feature e onde vivem os tickets dela (di
 
 Um ticket de cada vez, sempre: tickets são fatias verticais e colidem nos arquivos de junção (rotas, schema, registro de DI), então paralelismo de implementação fica de fora por design.
 
-**Pré-requisito:** o plugin `mattpocock-skills` — o `/tdd` e o `code-review` que o brief nomeia vêm dele. É a única dependência de upstream, e é pelo **nome público** das skills, que é interface estável.
+**Pré-requisito:** o plugin `mattpocock-skills` — o `/tdd` que o brief nomeia vem dele. É a única dependência de upstream, e é pelo **nome público** da skill, que é interface estável.
+
+**Uma invariante governa todo este arquivo: quem despacha agente é você, nunca um subagent.** Agente-dentro-de-agente é onde o trabalho assíncrono se perde — a camada de dentro encerra a vez esperando um resultado que já chegou, e a fila para até alguém cutucar por fora. Por isso a revisão (passo 3.1) e o checkpoint (passo 3.3) moram aqui, e o subagent do ticket só implementa.
 
 **Escalar**, onde este arquivo disser, é parar a fila e entregar a decisão ao usuário — nunca seguir com um palpite.
 
@@ -53,30 +55,51 @@ Para cada ticket da frontier, despache **um** subagent com o brief abaixo, preen
 >
 > Use a skill `mattpocock-skills:tdd` nas costuras nomeadas no spec. Enquanto trabalha, rode só typecheck e os testes do arquivo. Ao fim, rode a suíte completa **uma vez** — a menos que o repo declare cadência própria (ex.: `docs/agents/testing.md` ou seção do `CLAUDE.md`); havendo declaração, siga-a no lugar desta regra default.
 >
-> Anote o SHA do `HEAD`, commite, revise com a skill `mattpocock-skills:code-review` usando esse SHA como ponto fixo e aplique o que couber via `--amend`. **Um ticket = um commit.**
+> **Rode todo comando em primeiro plano.** Nada de `run_in_background` nem de monitor: teste é a etapa em que mais se espera, e é despachando espera em segundo plano que um agente encerra a vez e não volta. Aceite o tempo de parede.
+>
+> Anote o SHA do `HEAD` **antes** de commitar — é o ponto fixo da revisão — e commite. **Um ticket = um commit.**
+>
+> **Não revise, e não marque o ticket como feito ainda.** A revisão é despachada por quem te chamou; ela volta pra você e você a aplica. Encerre aqui devolvendo `REVIEW_PENDING`.
 >
 > Spec conflitando com o código: erro **factual** (nome, assinatura, caminho — só existe um jeito certo) corrija no spec e siga; erro **de design**, registre no ticket o que o spec diz, o que o código mostra e por que conflitam, devolva `SPEC_DESIGN` e não implemente por cima. Na dúvida, é design.
 >
-> Terminando, marque o ticket como feito conforme `docs/agents/issue-tracker.md` — e não feche issue à mão: fechar é do merge.
->
-> Devolva **apenas**: `STATUS` (`DONE` | `SPEC_DESIGN` | `BLOCKED`) · SHA do commit, se houver · testes em uma linha · até três linhas de observação.
+> Devolva **apenas**: `STATUS` (`REVIEW_PENDING` | `SPEC_DESIGN` | `BLOCKED`) · SHA do ponto fixo e SHA do commit · testes em uma linha · até três linhas de observação.
 
 </brief-de-dispatch>
 
-Status possíveis e o que fazer com cada um:
+### 3.1 A revisão, e a volta ao mesmo subagent
 
-- **`DONE`** — registre no ledger e siga para o próximo da frontier. Não pause para aprovação entre tickets: este é o modo autônomo; quem quer acompanhar de perto roda o `/implement` do `mattpocock-skills` à mão, um ticket por sessão.
+`REVIEW_PENDING` significa que existe commit e falta revisá-lo. Três movimentos, nesta ordem.
+
+**Despache os dois revisores, em paralelo, daqui.** Uma mensagem, duas chamadas do Agent tool, subagent `general-purpose`. Passe a cada um: o comando de diff (`git diff <ponto-fixo>...HEAD`, três pontos), a lista de commits, o **caminho** de `references/revisao.md` desta skill dizendo qual seção é a dele (`## Eixo Standards` ou `## Eixo Spec`), e — só para o de Spec — os caminhos do spec e do ticket. Mande cada um **escrever o relatório** em `.scratch/ticket-run/review-<referência>-<eixo>.md` e devolver **uma linha**: `<n> achados · <caminho>`.
+
+Você não lê `references/revisao.md` nem os relatórios. Passa caminhos, recebe duas linhas. É o mesmo princípio do passo 1: o que você cola no seu contexto fica lá até o fim da fila, e uma fila longa não sobrevive a dois relatórios por ticket.
+
+Antes de despachar, confirme que o ponto fixo resolve (`git rev-parse`) e que o diff não é vazio — ref errada tem que falhar aqui, não dentro de dois revisores.
+
+**Devolva os relatórios ao subagent do ticket**, com `SendMessage`, endereçando o mesmo agent que devolveu `REVIEW_PENDING`. Ele ainda tem o contexto do que implementou e por quê — que é justamente o que os revisores não têm e o que você não deve carregar. Peça: *leia `<caminho standards>` e `<caminho spec>`, aplique o que couber via `--amend` sobre `<sha>`, mantendo um ticket = um commit; marque o ticket como feito conforme `docs/agents/issue-tracker.md` e não feche issue à mão, que fechar é do merge; devolva `DONE` · SHA final · o que aplicou e o que descartou, com o porquê, em até três linhas.*
+
+Achado que o subagent descartar é informação, não fracasso — registre a justificativa no ledger junto com o resto.
+
+**Se o subagent do ticket não responder** ao `SendMessage` (morreu, ou o retorno vem fora do contrato), não reimplemente e não aplique você mesmo: despache um subagent fresco dizendo que o commit `<sha>` já entrega o ticket, que a revisão está nos dois caminhos, e que a tarefa dele é só aplicar e fechar. É a mesma retomada do passo 2, com os relatórios já prontos.
+
+### 3.2 Status possíveis
+
+Um ticket passa por dois retornos: o do dispatch e o da volta da revisão. Os status abaixo valem para os dois.
+
+- **`REVIEW_PENDING`** — caminho normal do primeiro retorno. Registre o SHA no ledger **antes** de despachar a revisão: o commit já existe, e se esta sessão cair no meio do passo 3.1 é essa linha que evita reimplementá-lo. Siga para 3.1.
+- **`DONE`** — só chega depois da revisão aplicada. Registre no ledger, com o SHA final e o que foi descartado, e siga para o próximo da frontier. Não pause para aprovação entre tickets: este é o modo autônomo; quem quer acompanhar de perto roda o `/implement` do `mattpocock-skills` à mão, um ticket por sessão.
 - **`SPEC_DESIGN`** — o subagent encontrou erro de spec de design, registrou o conflito no ticket e parou. A decisão pertence a uma sessão de effort alto apontada para esse registro — **essa sessão é esta**. Pare o loop, apresente o registro ao usuário e espere a decisão dele. Decidido, o ticket volta à frontier.
 - **`BLOCKED`** — dono alheio, dependência externa, ou o subagent travou sem progresso. **Escale:** bloqueio é informação, e a fila espera a resposta na ordem em que está.
 - **Qualquer outra coisa** — retorno fora do contrato, subagent que morreu, erro não classificado. Trate como `BLOCKED`: registre no ledger o que voltou **literalmente**, sem interpretar, e **escale**. Um retorno que você não reconhece é a situação em que menos se sabe o que aconteceu com o repositório, e portanto a pior hora para adivinhar um status e seguir. Reexecutar o ticket também é decisão do usuário: o subagent pode ter commitado antes de morrer.
 
 Todo desfecho — inclusive os ruins — vira linha no ledger. Descarte silencioso é proibido: um ticket que "sumiu" da fila é um bug seu.
 
-### Quando o checkpoint vence
+### 3.3 Quando o checkpoint vence
 
 **Quem conta é você, pelo ledger.** Cinco tickets fechados desde a última linha de checkpoint (ou desde o início da fila) fecham um ciclo, e o próximo dispatch só sai depois dele.
 
-Vencido, **invoque a skill `ticket:checkpoint`** — aqui no orquestrador, nunca num subagent. O checkpoint é seu por dois motivos: subagent não despacha agent, e as duas entradas que a skill precisa só você tem — o intervalo (o SHA da última linha de checkpoint do ledger) e o lote (referência + SHA das linhas do ciclo).
+Vencido, **invoque a skill `ticket:checkpoint`** — aqui no orquestrador, nunca num subagent. O checkpoint é seu pela invariante do topo deste arquivo, e porque as duas entradas que a skill precisa só você tem — o intervalo (o SHA da última linha de checkpoint do ledger) e o lote (referência + SHA das linhas do ciclo).
 
 Se o repo declarar (passo 3) que a suíte completa fica reservada pro checkpoint em vez de rodar por ticket, é aqui — no orquestrador, antes de invocar a skill — que ela roda; a `ticket:checkpoint` é estritamente leitura e não executa teste nenhum.
 

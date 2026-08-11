@@ -24,7 +24,9 @@ consistência entre tickets e o orquestrador autônomo da fila.
 
 A única dependência do upstream é o **nome público** das skills
 (`mattpocock-skills:tdd`, `mattpocock-skills:code-review`,
-`mattpocock-skills:domain-modeling`), que é interface estável.
+`mattpocock-skills:domain-modeling`), que é interface estável. A `code-review`
+serve o caminho manual (6a); desde a 2.2.0 a `run` não a invoca — ela despacha
+os dois eixos direto, do orquestrador, pelos motivos em `skills/run/references/revisao.md`.
 
 ## O que vem no pacote
 
@@ -32,7 +34,7 @@ A única dependência do upstream é o **nome público** das skills
 |---|---|
 | Skill `estado-compartilhado` | `/ticket:estado-compartilhado <spec>` — entre o `/to-spec` e o `/to-tickets`: mapeia campo → escritores por fluxo e resolve conflito de escritor em ADR. O fatiamento corta por comportamento visível e nunca faz essa passada; numa etapa real de 64 tickets, 7 tinham conflito de escritor e todos passaram na própria revisão |
 | Skill `checkpoint` | `/ticket:checkpoint` — a cada 5 tickets, dispara o agent revisor sobre o acumulado, aplica correções pequenas num `refactor: checkpoint` e roteia achados para quarentena fora da fila, com critério de promoção explícito |
-| Skill `run` | `/ticket:run <spec/feature>` — orquestrador da fila: executa a frontier em sequência, um subagent fresco por ticket com brief inline, ledger de progresso retomável e escalada explícita; invoca a `checkpoint` a cada ciclo |
+| Skill `run` | `/ticket:run <spec/feature>` — orquestrador da fila: executa a frontier em sequência, um subagent fresco por ticket com brief inline, ledger de progresso retomável e escalada explícita; despacha a revisão de dois eixos e a devolve ao subagent que implementou; invoca a `checkpoint` a cada ciclo |
 | Agent `checkpoint-reviewer` | Revisão de consistência **entre** tickets acumulados (Opus, effort high) — o olhar que nenhuma sessão isolada tem |
 | Hook `referencias-de-linha.py` | PostToolUse em todo `Write`/`Edit` de `.md`: acusa documento que nasce com âncora `arquivo:linha`, que envelhece a cada ticket. Aviso, não bloqueio; silencioso fora dos repos que usam o fluxo |
 
