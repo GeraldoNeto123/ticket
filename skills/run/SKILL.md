@@ -47,13 +47,15 @@ Ele é memória de **execução**, não conhecimento do projeto — os fatos dur
 
 ## 3. O loop
 
+Antes do primeiro dispatch, resolva **você** as duas convenções do repo que o brief carrega preenchidas: a cadência de teste (`docs/agents/testing.md` ou seção do `CLAUDE.md`; sem declaração, a default é suíte completa uma vez ao fim do ticket) e a convenção de done do tracker (`docs/agents/issue-tracker.md` e o mapeamento de labels/estados, se o repo tiver um). O subagent recebe a instrução **concreta** — comandos e specs nomeados, o estado exato em que a issue termina —, nunca o documento pra interpretar: interpretação delegada é onde a cadência declarada vira suíte rodada à toa e o fechamento sai no estado errado.
+
 Para cada ticket da frontier, despache **um** subagent com o brief abaixo, preenchido — prosa inline, sem mandar ler arquivo nenhum de skill:
 
 <brief-de-dispatch>
 
 > Implemente o ticket `<referência>`, em `<caminho ou nº>`. Spec em `<caminho>`. Leia ambos antes de qualquer coisa, e também `CONTEXT.md` e os ADRs de `docs/adr/` que tocarem a área. Escopo restrito ao ticket: excedente vira ticket novo, não código.
 >
-> Use a skill `mattpocock-skills:tdd` nas costuras nomeadas no spec. Enquanto trabalha, rode só typecheck e os testes do arquivo. Ao fim, rode a suíte completa **uma vez** — a menos que o repo declare cadência própria (ex.: `docs/agents/testing.md` ou seção do `CLAUDE.md`); havendo declaração, siga-a no lugar desta regra default.
+> Use a skill `mattpocock-skills:tdd` nas costuras nomeadas no spec. Enquanto trabalha, rode só typecheck e os testes do arquivo. Ao fim: `<instrução-de-teste que você resolveu da cadência do repo — comandos e specs nomeados, ex.: "rode só cypress/e2e/foo.cy.js; a suíte completa fica com o orquestrador">`.
 >
 > **Rode todo comando em primeiro plano.** Nada de `run_in_background` nem de monitor: teste é a etapa em que mais se espera, e é despachando espera em segundo plano que um agente encerra a vez e não volta. Aceite o tempo de parede.
 >
@@ -71,17 +73,17 @@ Para cada ticket da frontier, despache **um** subagent com o brief abaixo, preen
 
 `REVIEW_PENDING` significa que existe commit e falta revisá-lo. Três movimentos, nesta ordem.
 
-**Despache os dois revisores, em paralelo, daqui.** Uma mensagem, duas chamadas do Agent tool, subagent `general-purpose`. Passe a cada um: o comando de diff (`git diff <ponto-fixo>...HEAD`, três pontos), a lista de commits, o **caminho** de `references/revisao.md` desta skill dizendo qual seção é a dele (`## Eixo Standards` ou `## Eixo Spec`), e — só para o de Spec — os caminhos do spec e do ticket. Mande cada um **escrever o relatório** em `.scratch/ticket-run/review-<referência>-<eixo>.md` e devolver **uma linha**: `<n> achados · <caminho>`.
+**Dimensione a revisão pelo diff** (`git diff <ponto-fixo>...HEAD --stat`): até ~150 linhas mudadas, **um revisor único** cobre os dois eixos num relatório só (`review-<referência>.md`); acima disso, **dois revisores em paralelo**, um por eixo, numa mensagem só (duas chamadas do Agent tool). Subagent `general-purpose` nos dois casos. Passe a cada um: o comando de diff (`git diff <ponto-fixo>...HEAD`, três pontos), a lista de commits, o **caminho** de `references/revisao.md` desta skill dizendo qual(is) seção(ões) cobrir (`## Eixo Standards`, `## Eixo Spec`, ou ambas), e — para quem cobre Spec — os caminhos do spec e do ticket. Mande cada um **escrever o relatório** em `.scratch/ticket-run/review-<referência>[-<eixo>].md` e devolver **uma linha**: `<n> achados · <caminho>`.
 
-Você não lê `references/revisao.md` nem os relatórios. Passa caminhos, recebe duas linhas. É o mesmo princípio do passo 1: o que você cola no seu contexto fica lá até o fim da fila, e uma fila longa não sobrevive a dois relatórios por ticket.
+Você não lê `references/revisao.md` nem os relatórios. Passa caminhos, recebe uma ou duas linhas. É o mesmo princípio do passo 1: o que você cola no seu contexto fica lá até o fim da fila, e uma fila longa não sobrevive a dois relatórios por ticket.
 
 Antes de despachar, confirme que o ponto fixo resolve (`git rev-parse`) e que o diff não é vazio — ref errada tem que falhar aqui, não dentro de dois revisores.
 
-**Devolva os relatórios ao subagent do ticket**, com `SendMessage`, endereçando o mesmo agent que devolveu `REVIEW_PENDING`. Ele ainda tem o contexto do que implementou e por quê — que é justamente o que os revisores não têm e o que você não deve carregar. Peça: *leia `<caminho standards>` e `<caminho spec>`, aplique o que couber via `--amend` sobre `<sha>`, mantendo um ticket = um commit; marque o ticket como feito conforme `docs/agents/issue-tracker.md` e não feche issue à mão, que fechar é do merge; devolva `DONE` · SHA final · o que aplicou e o que descartou, com o porquê, em até três linhas.*
+**Devolva os relatórios ao subagent do ticket**, com `SendMessage`, endereçando o mesmo agent que devolveu `REVIEW_PENDING`. Ele ainda tem o contexto do que implementou e por quê — que é justamente o que os revisores não têm e o que você não deve carregar. Peça: *leia o(s) relatório(s) em `<caminho(s)>`, aplique o que couber via `--amend` sobre `<sha>`, mantendo um ticket = um commit; em seguida `<instrução-de-done que você resolveu da convenção do repo — o estado exato em que a issue termina: fechada ou aberta, com quais labels>`; devolva `DONE` · SHA final · o que aplicou e o que descartou, com o porquê, em até três linhas.*
 
 Achado que o subagent descartar é informação, não fracasso — registre a justificativa no ledger junto com o resto.
 
-**Se o subagent do ticket não responder** ao `SendMessage` (morreu, ou o retorno vem fora do contrato), não reimplemente e não aplique você mesmo: despache um subagent fresco dizendo que o commit `<sha>` já entrega o ticket, que a revisão está nos dois caminhos, e que a tarefa dele é só aplicar e fechar. É a mesma retomada do passo 2, com os relatórios já prontos.
+**Se o subagent do ticket não responder** ao `SendMessage` (morreu, ou o retorno vem fora do contrato), não reimplemente e não aplique você mesmo: despache um subagent fresco dizendo que o commit `<sha>` já entrega o ticket, que a revisão está no(s) caminho(s), e que a tarefa dele é só aplicar e fechar. É a mesma retomada do passo 2, com os relatórios já prontos.
 
 ### 3.2 Status possíveis
 
@@ -107,6 +109,6 @@ Registre o resultado em linha própria no ledger e siga. Achados novos vão para
 
 ## 4. Encerramento
 
-Frontier vazia = fila encerrada. Se o último lote não fechou um ciclo de checkpoint, invoque a `ticket:checkpoint` uma última vez antes do resumo — fila encerrada com acumulado não revisado é trabalho pela metade. Se a cadência declarada pelo repo (passo 3) reserva a suíte completa pro checkpoint, rode-a aqui também, cobrindo o que fechou depois do último ciclo.
+Frontier vazia = fila encerrada. Acumulado de **3+ tickets** desde a última linha de checkpoint: invoque a `ticket:checkpoint` uma última vez antes do resumo — fila encerrada com um lote desse tamanho não revisado é trabalho pela metade. Com 1–2 tickets, o ciclo inteiro custa mais do que o lote vale: registre no ledger uma linha **`Pendente de checkpoint`** com referência e SHA de cada ticket, e siga pro resumo — a contagem do passo 3.3 parte da última linha de checkpoint, então uma fila futura da mesma demanda absorve esses tickets no primeiro ciclo dela por construção, e o marcador de commit do §1 da `ticket:checkpoint` garante o intervalo mesmo se o ledger se perder. Se a cadência declarada pelo repo (passo 3) reserva teste pro checkpoint, ele acompanha o checkpoint: roda quando ele roda.
 
 Monte o resumo final **a partir do ledger**, não de memória: tickets concluídos com SHAs, observações acumuladas, achados registrados pelos checkpoints, e o que ficou bloqueado ou aguardando decisão. Se sobraram tickets inalcançáveis (bloqueador nunca resolvido, ciclo de dependência), aponte-os explicitamente — são a primeira coisa que o usuário precisa destravar.
