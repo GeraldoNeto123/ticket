@@ -25,6 +25,16 @@ arquivo ↔ comentário:
 Nos dois modos o status de nascença é **sempre** `needs-triage`, nunca
 `ready-for-agent`. Promover achado a item de fila é decisão humana, via triagem.
 
+**O mesmo contêiner recebe o excedente que a sessão de implementação encontra.** A
+régua é uma só: achado nasce em quarentena, independentemente de quem tropeçou
+nele. A assimetria alternativa — checkpoint em quarentena, implementador abrindo
+issue direto — foi testada e sai cara nos dois sentidos. Numa fila real, oito
+issues nasceram assim em uma noite, sem dedup entre si; e o checkpoint seguinte
+gastou a rodada inteira para achar três defeitos e descobrir que os três já eram
+issues abertas horas antes pelos próprios implementadores. Capacidade de revisão
+transversal gasta redescobrindo o que já estava registrado é o custo exato que a
+quarentena única evita.
+
 **Se a demanda não tem issue pai, escale.** O `/to-tickets` trata o `## Parent`
 como opcional, então o caso é real. A criação do pai é do usuário: inventar
 estrutura no tracker de alguém é surpresa, e como a demanda se organiza é decisão
