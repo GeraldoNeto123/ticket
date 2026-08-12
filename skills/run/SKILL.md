@@ -28,6 +28,8 @@ Leia `docs/agents/issue-tracker.md` para saber o modo (arquivo ou tracker) e o C
 
 Ticket com dono alheio (`Assignee:` de outra pessoa, no formato que o `issue-tracker.md` definir) sai da frontier — **escale**: atribuição alheia costuma significar trabalho já em curso, e implementar por cima gera conflito de merge e trabalho jogado fora. O dono dos demais é o operador, nunca a sessão: quem responde pelo ticket é o humano ao teclado.
 
+**Ticket cujo corpo termina em decisão aberta também sai da frontier — escale.** Corpo que fecha com "a decidir na triagem", com uma lista de opções sem desfecho, ou com "provavelmente pede contrato novo" não é ticket pronto: despachá-lo delega o desenho ao implementador, ou seja, faz a decisão mais cara da fila ser tomada por quem tem menos contexto para tomá-la. E não vale contornar procurando o desfecho nos comentários para passá-lo no prompt, por dois motivos. O brief manda o subagent **ler o ticket**, e o comando de leitura de issue sem a flag de comentários não mostra comentário nenhum — o que você leu não é o que ele lê. Além disso, log de comentário é append-only: quando um adendo substitui critério de aceite do brief original, os dois textos passam a conviver, e mandar ler ambos devolve ao implementador exatamente a adjudicação que você tentou evitar. O desfecho tem que estar **no corpo**, e quem o coloca lá é a triagem, com o humano.
+
 Leia o spec só o suficiente para saber referenciá-lo. **Nos prompts de dispatch, passe caminhos e referências** — o conteúdo do spec e dos tickets fica de fora. Tudo que você cola num prompt fica residente no seu contexto até o fim da fila; um caminho custa uma linha.
 
 ## 2. Ledger
