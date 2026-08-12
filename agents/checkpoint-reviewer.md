@@ -1,6 +1,6 @@
 ---
 name: checkpoint-reviewer
-description: Revisão de consistência entre tickets acumulados desde o último checkpoint do fluxo de implementação. Disparado pela skill /ticket:checkpoint a cada 5 tickets — à mão ou pelo orquestrador da /ticket:run; recebe um intervalo de commits, onde vivem os tickets (diretório ou tracker) e o lote de tickets fechados nele, devolve relatório sem alterar nada.
+description: Revisão de consistência entre os tickets acumulados desde o último checkpoint. Disparado pela skill /ticket:checkpoint; devolve relatório sem alterar nada.
 model: opus
 effort: high
 tools: Read, Glob, Grep, Bash

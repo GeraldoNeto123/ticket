@@ -87,11 +87,12 @@ Reinicie a sessão (ou `/reload-plugins`) e invoque:
 ```
 
 O `run` segue a filosofia *subagent-driven*: um subagent fresco por ticket (cada
-um foi dimensionado para uma janela limpa), estritamente sequencial — tickets são
-fatias verticais e colidem nos arquivos de junção, então paralelismo de
-implementação fica de fora por design. O orquestrador mantém um ledger de
-progresso e para apenas nos casos que exigem decisão humana (erro de spec de
-design, bloqueio).
+um foi dimensionado para uma janela limpa), um de cada vez por default — tickets
+são fatias verticais e colidem nos arquivos de junção. A exceção é estreita:
+clusters da frontier que comprovadamente não compartilham arquivo nenhum podem
+correr em paralelo, um `git worktree` por cluster, obrigatório. O orquestrador
+mantém um ledger de progresso e para apenas nos casos que exigem decisão humana
+(erro de spec de design, bloqueio).
 
 ## O checkpoint, em uma linha por destino
 

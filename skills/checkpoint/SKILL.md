@@ -1,6 +1,6 @@
 ---
 name: checkpoint
-description: "Checkpoint de consistência do acumulado de tickets: dispara o agent checkpoint-reviewer sobre um intervalo de commits, aplica correções pequenas e roteia achados para fora da fila. Invocada pelo orquestrador da /ticket:run a cada 5 tickets fechados, ou pelo usuário para revisar o acumulado de sessões manuais."
+description: "Checkpoint de consistência do acumulado de tickets: dispara o agent checkpoint-reviewer sobre um intervalo de commits. Invocada pelo orquestrador da /ticket:run a cada 5 tickets fechados, ou pelo usuário para revisar o acumulado de sessões manuais."
 ---
 
 # /ticket:checkpoint

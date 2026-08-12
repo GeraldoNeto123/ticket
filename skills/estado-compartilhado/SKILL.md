@@ -12,7 +12,7 @@ O argumento aponta o spec da etapa. Esta skill roda **entre** o `/to-spec` e o `
 
 O `/to-tickets` fatia por comportamento visível ao usuário — fatias verticais, que são a fatia certa para entregar valor. Falta a passada **ortogonal**: olhar o estado que os comportamentos compartilham. Sem ela, dois tickets consomem premissas opostas sobre o mesmo campo, cada um passa na própria revisão e nos próprios testes, e o defeito só aparece no checkpoint — caro, e com chance de escapar. Numa etapa real de 64 tickets, sete tinham exatamente essa forma, todos sobre um punhado de colunas da mesma tabela.
 
-O modo (arquivo ou tracker) vem do `docs/agents/issue-tracker.md`, como em toda skill deste plugin.
+O modo (arquivo ou tracker) vem do `docs/agents/issue-tracker.md`.
 
 ## 1. Critério de entrada
 
