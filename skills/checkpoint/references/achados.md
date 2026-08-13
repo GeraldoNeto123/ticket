@@ -29,13 +29,13 @@ têm a mesma forma — pasta da feature ↔ issue pai, arquivo ↔ comentário:
 é a camada grossa do time, e as skills nunca escrevem nele: nem ticket, nem
 achado, nem registro.
 
-**Sem a linha declarada, o achado mora onde o dedup é barato e confiável** — e
-hoje isso depende da plataforma: **GitHub → `tracker`**, porque
-`gh search issues --match comments` encontra achado dentro de comentário numa
-query só; **GitLab → `arquivo`**, porque o `glab` procura apenas em título e
-descrição. Verificado em 2026-08-13, gh 2.96.0 e glab 1.36.0. O que manda é a
-capacidade de busca, não o nome da plataforma: ganhando o `glab` busca em nota, o
-default dele passa a ser `tracker` — e projeto que declarou fica onde está.
+**Sem a linha declarada, o achado mora onde o dedup é barato e confiável.** Quem
+decide é a busca do CLI, não o nome da plataforma: **GitHub → `tracker`**, porque
+o `--match {title|body|comments}` do `gh search issues` alcança comentário;
+**GitLab → `arquivo`**, porque o `--in` do `glab` para em `title,description`. As
+duas flags se conferem num `--help`, e é assim que este default se revalida —
+ganhando o `glab` busca em nota, o default dele vira `tracker`, e projeto que
+declarou fica onde está.
 
 Nos dois contêineres o status de nascença é **sempre** `needs-triage`, nunca
 `ready-for-agent`. Promover achado a item de fila é decisão humana, via triagem.
@@ -105,14 +105,13 @@ de concluir "não é duplicata", confirme na fonte:
 gh issue view <pai> --comments | grep -i "<âncora>"
 ```
 
-Achado em `tracker` no **GitLab** não tem esse atalho: o `--in` do `glab` cobre
-título e descrição, e só. Ali o dedup é listar os pais por rótulo
-(`glab issue list --label checkpoint --all`) e ler as notas de cada um por
-`glab api projects/:id/issues/<n>/notes --paginate`, filtrando pela âncora —
-**não** por `glab issue view --comments`, que em issue de histórico longo imprime
-o bloco de notas vazio, sem erro e sem código de saída (visto em 2026-08-13 com
-110 e com 200 notas). É esse custo, e esse silêncio, que fazem o default do
-GitLab ser `arquivo`.
+Achado em `tracker` no **GitLab** não tem esse atalho. Ali o dedup é listar os
+pais por rótulo (`glab issue list --label checkpoint --all`) e ler as notas de
+cada um por `glab api projects/:id/issues/<n>/notes --paginate`, filtrando pela
+âncora — **não** por `glab issue view --comments`, que em issue de histórico
+longo imprime o bloco de notas vazio, sem erro e sem código de saída (2026-08-13;
+o limiar de notas não foi determinado). É esse custo, e esse silêncio, que fazem
+o default do GitLab ser `arquivo`.
 
 **Varra também os tickets já fechados, não só os contêineres de checkpoint** —
 aqui o `--search` basta, porque o conteúdo do ticket vive no corpo, não em
@@ -145,8 +144,9 @@ Projeto que troca o contêiner do achado deixa para trás o que já registrou no
 antigo. Essa pilha **fica onde está**: migrá-la custa mais do que vale material
 cuja maioria morre `wontfix` na triagem.
 
-**O dedup não a varre.** O corte é declarado no `issue-tracker.md` — a data e a
-issue que guarda o material anterior —, e o risco vem junto, explícito: achado
+**O dedup não a varre.** O corte é declarado no `issue-tracker.md` — a data e o
+contêiner antigo, a issue que guarda as notas ou a pasta que guarda os arquivos —,
+e o risco vem junto, explícito: achado
 anterior ao corte pode ser registrado de novo como se fosse novo. Quem fecha o
 risco é a triagem que consome a pilha; consumida, a linha do corte sai do
 arquivo. Varrer os dois lugares a cada achado é exatamente o custo que a troca de
