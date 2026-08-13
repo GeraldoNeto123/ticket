@@ -24,7 +24,7 @@ Vale a pena quando o cluster menor é grande o bastante para pagar o setup — n
 
 ## 1. Montar a fila
 
-Leia `docs/agents/issue-tracker.md` para saber o modo (arquivo ou tracker) e o CLI. Liste os tickets da feature com o campo **Blocked by** de cada um e monte a **frontier**: os tickets cujos bloqueadores estão todos done. Trabalhe sempre a frontier; quando um ticket termina, recalcule.
+Leia `docs/agents/issue-tracker.md` para saber onde vivem os tickets e qual o CLI. Liste os tickets da feature com o campo **Blocked by** de cada um e monte a **frontier**: os tickets cujos bloqueadores estão todos done. Trabalhe sempre a frontier; quando um ticket termina, recalcule.
 
 Ticket com dono alheio (`Assignee:` de outra pessoa, no formato que o `issue-tracker.md` definir) sai da frontier — **escale**: atribuição alheia costuma significar trabalho já em curso, e implementar por cima gera conflito de merge e trabalho jogado fora. O dono dos demais é o operador, nunca a sessão: quem responde pelo ticket é o humano ao teclado.
 
@@ -53,7 +53,7 @@ Antes do primeiro dispatch, resolva **você** as **quatro** convenções do repo
 1. **Onde nasce teste novo** — qual camada, com o comando dela. Repo que migrou de camada mantém o runner antigo instalado e verde por um bom tempo, e subagent que só recebe "rode os testes" continua escrevendo na camada que está sendo aposentada: cada ticket vira dívida nova, escrita no lugar errado por instrução sua. Sem declaração no repo, olhe os scripts do `package.json` (ou equivalente) **e a data** dos testes commitados — o que é recente manda, não o que é numeroso.
 2. **A cadência de teste** (`docs/agents/testing.md` ou seção do `CLAUDE.md`; sem declaração, a default é suíte completa uma vez ao fim do ticket). Camadas diferentes têm cadências diferentes — a barata roda sempre, a cara roda por raio de alcance —, então o brief costuma precisar de **dois** comandos, não de um.
 3. **A convenção de done do tracker** (`docs/agents/issue-tracker.md` e o mapeamento de labels/estados, se o repo tiver um).
-4. **Onde mora a quarentena da demanda** — o contêiner que o `references/achados.md` da `ticket:checkpoint` define (pasta da feature ou issue-mãe). É para lá que vai o excedente que o implementador encontrar, e o brief precisa do endereço concreto.
+4. **Onde mora a quarentena da demanda** — o contêiner que o `references/achados.md` da `ticket:checkpoint` define. **Ele não se deduz de onde vivem os tickets:** quem responde é a linha `**Onde vive o achado:**` do `issue-tracker.md`, e sem ela vale o default por plataforma que aquele arquivo enuncia. Ticket como issue do GitLab com achado em arquivo é caso normal, não exceção. É para lá que vai o excedente que o implementador encontrar, e o brief precisa do **endereço concreto**: o caminho da pasta, ou o número da issue pai com o comando de comentar.
 
 O subagent recebe a instrução **concreta** — comandos e alvos nomeados, o estado exato em que a issue termina, o caminho da quarentena —, nunca o documento pra interpretar: interpretação delegada é onde a cadência declarada vira suíte rodada à toa e o fechamento sai no estado errado.
 

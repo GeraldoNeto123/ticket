@@ -13,7 +13,10 @@ procurando o que nenhuma sessão isolada podia ver. Cadência: a cada **cinco**
 tickets fechados. Numa fila `/ticket:run`, quem conta é o orquestrador, pelo
 ledger; fora dela, quem invoca é o usuário.
 
-O modo (arquivo ou tracker) vem do `docs/agents/issue-tracker.md`.
+**Onde vivem os tickets e onde vive o achado são duas perguntas**, e o
+`docs/agents/issue-tracker.md` do projeto responde as duas separadamente: ticket
+como issue com achado em arquivo é combinação legítima. O §4 e o
+[`references/achados.md`](references/achados.md) tratam da segunda.
 
 ## 1. Intervalo e lote
 
@@ -49,8 +52,8 @@ entra por aí, e é o usuário quem decide o que fazer com ele.
 ## 2. Disparar a revisão
 
 Dispare o agent `checkpoint-reviewer` passando o **intervalo**, **onde vivem os
-tickets e o spec** (o diretório, em modo arquivo; o repo/projeto e o CLI de
-leitura, em modo tracker) e o **lote**. Ele devolve um relatório em quatro
+tickets e o spec** (o diretório, se são arquivos; o repo/projeto e o CLI de
+leitura, se são issues) e o **lote**. Ele devolve um relatório em quatro
 listas e não altera nada.
 
 ## 3. Correções pequenas
@@ -86,7 +89,7 @@ revisaria estes tickets de novo.
       ou vazia
 - [ ] Listas 2–4 roteadas pelo `achados.md`
 - [ ] O ciclo tem marcador no histórico (`refactor: checkpoint` ou
-      `docs(checkpoint):`) — em modo tracker, onde não há commit de achados, a
-      lista 1 vazia dispensa o marcador e o intervalo do próximo ciclo sai do
-      ledger ou do usuário
+      `docs(checkpoint):`) — com achado em `tracker`, onde não há commit de
+      achados, a lista 1 vazia dispensa o marcador e o intervalo do próximo ciclo
+      sai do ledger ou do usuário
 - [ ] Numa fila: linha própria de checkpoint no ledger, com o SHA final do ciclo

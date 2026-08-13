@@ -12,7 +12,7 @@ O argumento aponta o spec da etapa. Esta skill roda **entre** o `/to-spec` e o `
 
 O `/to-tickets` fatia por comportamento visível ao usuário — fatias verticais, que são a fatia certa para entregar valor. Falta a passada **ortogonal**: olhar o estado que os comportamentos compartilham. Sem ela, dois tickets consomem premissas opostas sobre o mesmo campo, cada um passa na própria revisão e nos próprios testes, e o defeito só aparece no checkpoint — caro, e com chance de escapar. Numa etapa real de 64 tickets, sete tinham exatamente essa forma, todos sobre um punhado de colunas da mesma tabela.
 
-O modo (arquivo ou tracker) vem do `docs/agents/issue-tracker.md`.
+Onde vivem os tickets vem do `docs/agents/issue-tracker.md`.
 
 ## 1. Critério de entrada
 
@@ -40,4 +40,4 @@ Siga para o `/to-tickets`, com três cuidados que vêm daqui:
 
 - **O ADR é entrada.** Cada ticket que toca um campo mapeado cita o ADR pelo número. O brief não reenumera escritores — o documento faz isso e sobrevive ao `/clear`, que o brief não faz.
 - **Referência a código é âncora: símbolo ou trecho, nunca `arquivo:linha`.** Escreva `ContratacaoService.assinar`, não `contratacao.service.ts:537` — o ticket é lido semanas depois, com todo ticket anterior já tendo empurrado as linhas do arquivo. O hook `referencias-de-linha.py` acusa na hora — troque ali mesmo.
-- **Em modo tracker, a demanda precisa de issue pai.** Os achados do checkpoint vivem como comentários na issue pai, e sem pai o checkpoint para e pergunta — no meio de uma fila em andamento, que é a pior hora. Se não houver pai, **escale agora**, antes de publicar os tickets: criar estrutura no tracker de alguém por conta própria é surpresa, mas perguntar aqui custa uma frase.
+- **Se o achado do projeto vive no tracker, a demanda precisa de issue pai.** É o `issue-tracker.md` que declara isso (`**Onde vive o achado: tracker.**`); nesse caso os achados do checkpoint são comentários na issue pai, e sem pai o checkpoint para e pergunta — no meio de uma fila em andamento, que é a pior hora. Se não houver pai, **escale agora**, antes de publicar os tickets: criar estrutura no tracker de alguém por conta própria é surpresa, mas perguntar aqui custa uma frase.

@@ -60,6 +60,9 @@ tickets é o orquestrador, pelo ledger.
 
    Isso cria `docs/agents/issue-tracker.md` (onde os tickets vivem: arquivos
    `.md`, GitHub, GitLab...) e o vocabulário de rótulos que as skills consultam.
+   Acrescente ali a linha `**Onde vive o achado: arquivo.**` (ou `tracker`) se o
+   contêiner de quarentena do projeto não for o default por plataforma que o
+   `achados.md` da `ticket:checkpoint` enuncia.
 
 3. **Duas regras no `CLAUDE.md` do projeto** — elas valem também na sessão
    manual (`/implement` puro), que nenhuma skill deste plugin embala:
@@ -98,7 +101,8 @@ mantém um ledger de progresso e para apenas nos casos que exigem decisão human
 
 Correções pequenas viram um `refactor:`; defeitos reais viram achados em
 quarentena no contêiner de checkpoint da demanda (pasta `checkpoint/` irmã de
-`issues/`; comentário na issue pai em modo tracker), sempre `needs-triage` —
+`issues/`, ou comentário na issue pai — o projeto declara qual, independente de
+onde vivem os tickets), sempre `needs-triage` —
 promover à fila é decisão humana, a issue só nasce na promoção, e o critério de
 promoção é explícito: produz dado errado para o cliente, ou recorreu em dois
 checkpoints; inconsistências sem defeito viram linha num registro por checkpoint;

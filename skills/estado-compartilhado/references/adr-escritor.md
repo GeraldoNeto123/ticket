@@ -19,6 +19,6 @@ Dois casos:
   (numa fila, devolva `SPEC_DESIGN`). Implementar por cima reabre a decisão sem
   quem a tomou.
 
-Uma ressalva: **ADR sempre commita, inclusive em modo tracker.** Editar o corpo
-da issue vale para o spec, que vive lá. O ADR mora em `docs/adr/` nos dois modos,
-então a correção é sempre um `docs:`.
+Uma ressalva: **ADR sempre commita, inclusive com os tickets no tracker.** Editar
+o corpo da issue vale para o spec, que vive lá. O ADR mora em `docs/adr/` em
+qualquer projeto, então a correção é sempre um `docs:`.

@@ -10,19 +10,34 @@ escopo original. Sem isso ela cresce mais rápido do que é consumida, e o "done
 vira alvo móvel.
 
 Tudo que o checkpoint produz vive **na demanda de onde veio**, num contêiner
-separado da fila. Os dois modos têm a mesma forma — pasta da feature ↔ issue pai,
-arquivo ↔ comentário:
+separado da fila. **Onde vive o achado é pergunta independente de onde vivem os
+tickets**: ticket como issue do GitLab com achado em arquivo é combinação
+legítima e frequente. Quem responde é a linha `**Onde vive o achado: arquivo.**`
+(ou `tracker`) do `docs/agents/issue-tracker.md` do projeto. Os dois contêineres
+têm a mesma forma — pasta da feature ↔ issue pai, arquivo ↔ comentário:
 
-- **Modo arquivo:** `.scratch/<feature>/checkpoint/`, irmã de `issues/` e não
+- **`arquivo`:** `.scratch/<feature>/checkpoint/`, irmã de `issues/` e não
   dentro dela. Um arquivo por achado, `<slug-da-âncora>.md`, sem número da
   sequência da feature: numeração é da fila, e achado não é fila.
-- **Modo tracker:** um **comentário na issue pai** da demanda, com os rótulos
+- **`tracker`:** um **comentário na issue pai** da demanda, com os rótulos
   `checkpoint` + `needs-triage` aplicados **ao pai**. É por eles que a busca do
   dedup acha os contêineres. Achado não abre issue: ela nasce na **promoção**,
   quando um humano decidiu. Abri-la na detecção enche board, relatório e métrica
   de sprint com trabalho que ninguém decidiu que existe.
 
-Nos dois modos o status de nascença é **sempre** `needs-triage`, nunca
+**Tracker aqui é o de granularidade fina — issues do GitHub ou do GitLab.** Jira
+é a camada grossa do time, e as skills nunca escrevem nele: nem ticket, nem
+achado, nem registro.
+
+**Sem a linha declarada, o achado mora onde o dedup é barato e confiável** — e
+hoje isso depende da plataforma: **GitHub → `tracker`**, porque
+`gh search issues --match comments` encontra achado dentro de comentário numa
+query só; **GitLab → `arquivo`**, porque o `glab` procura apenas em título e
+descrição. Verificado em 2026-08-13, gh 2.96.0 e glab 1.36.0. O que manda é a
+capacidade de busca, não o nome da plataforma: ganhando o `glab` busca em nota, o
+default dele passa a ser `tracker` — e projeto que declarou fica onde está.
+
+Nos dois contêineres o status de nascença é **sempre** `needs-triage`, nunca
 `ready-for-agent`. Promover achado a item de fila é decisão humana, via triagem.
 
 **O mesmo contêiner recebe o excedente que a sessão de implementação encontra.** A
@@ -35,8 +50,8 @@ issues abertas horas antes pelos próprios implementadores. Capacidade de revis�
 transversal gasta redescobrindo o que já estava registrado é o custo exato que a
 quarentena única evita.
 
-**Se a demanda não tem issue pai, escale.** O `/to-tickets` trata o `## Parent`
-como opcional, então o caso é real. A criação do pai é do usuário: inventar
+**Com achado em `tracker`, demanda sem issue pai escala.** O `/to-tickets` trata
+o `## Parent` como opcional, então o caso é real. A criação do pai é do usuário: inventar
 estrutura no tracker de alguém é surpresa, e como a demanda se organiza é decisão
 dele. Reporte os achados no encerramento para não perdê-los enquanto ele decide.
 
@@ -73,25 +88,40 @@ O revisor reporta a âncora e para aí. Faça a busca antes de criar, sempre sob
 **todos** os contêineres, nunca só o da demanda da vez:
 
 ```bash
-# arquivo — o glob atravessa as features; sem ele, o dedup cega
+# achado em arquivo — o glob atravessa as features; sem ele, o dedup cega
 grep -ril "<âncora>" .scratch/*/checkpoint/
 
-# tracker — os pais rotulados são os contêineres; leia os comentários de cada um
-gh issue list   --label checkpoint --state all --json number --jq '.[].number'
-glab issue list --label checkpoint --all
-# depois, por pai:
-gh issue view <n> --comments | grep -i "<âncora>"
-glab issue view <n> --comments | grep -i "<âncora>"
+# achado em tracker, GitHub — uma query, comentário incluído
+gh search issues "<âncora>" --match comments --repo <owner>/<repo> --state all
 ```
 
-São duas etapas porque **nenhum dos dois CLIs procura dentro de comentário** — o
-`--search` cobre título e descrição, e só. Listar os pais pelo rótulo e ler os
-comentários funciona igual nas duas plataformas.
-
-**Varra também os tickets já fechados, não só os contêineres de checkpoint:**
+O `--match {title|body|comments}` do `gh` é a busca em comentário, e ela dispensa
+listar os pais rotulados para ler as notas de cada um. **Ela é indexada e
+eventualmente consistente**, e o dedup roda logo depois de outra sessão ter
+registrado o achado — exatamente a janela em que o índice ainda não sabe. Antes
+de concluir "não é duplicata", confirme na fonte:
 
 ```bash
-grep -ril "<âncora>" .scratch/*/issues/
+gh issue view <pai> --comments | grep -i "<âncora>"
+```
+
+Achado em `tracker` no **GitLab** não tem esse atalho: o `--in` do `glab` cobre
+título e descrição, e só. Ali o dedup é listar os pais por rótulo
+(`glab issue list --label checkpoint --all`) e ler as notas de cada um por
+`glab api projects/:id/issues/<n>/notes --paginate`, filtrando pela âncora —
+**não** por `glab issue view --comments`, que em issue de histórico longo imprime
+o bloco de notas vazio, sem erro e sem código de saída (visto em 2026-08-13 com
+110 e com 200 notas). É esse custo, e esse silêncio, que fazem o default do
+GitLab ser `arquivo`.
+
+**Varra também os tickets já fechados, não só os contêineres de checkpoint** —
+aqui o `--search` basta, porque o conteúdo do ticket vive no corpo, não em
+comentário:
+
+```bash
+grep -ril "<âncora>" .scratch/*/issues/          # tickets em arquivo
+gh   search issues "<âncora>" --repo <owner>/<repo> --state all
+glab issue list --search "<âncora>" --all
 ```
 
 Um ticket `done` cuja âncora bate pode ser exatamente este achado, já decidido —
@@ -108,6 +138,19 @@ a cada lote.
 
 Se já existe, acrescente ao registro existente o que o novo checkpoint adiciona.
 **Não crie outro.**
+
+### Quarentena legada, quando o contêiner muda
+
+Projeto que troca o contêiner do achado deixa para trás o que já registrou no
+antigo. Essa pilha **fica onde está**: migrá-la custa mais do que vale material
+cuja maioria morre `wontfix` na triagem.
+
+**O dedup não a varre.** O corte é declarado no `issue-tracker.md` — a data e a
+issue que guarda o material anterior —, e o risco vem junto, explícito: achado
+anterior ao corte pode ser registrado de novo como se fosse novo. Quem fecha o
+risco é a triagem que consome a pilha; consumida, a linha do corte sai do
+arquivo. Varrer os dois lugares a cada achado é exatamente o custo que a troca de
+contêiner existiu para eliminar.
 
 <template-achado>
 
@@ -139,9 +182,9 @@ aqui a mesma **âncora** do achado. O registro é o artefato de vida mais longa 
 fluxo, porque só sai quando alguém o promove — é onde uma referência frágil tem
 mais tempo para deixar de corresponder.
 
-- **Modo arquivo:** `.scratch/<feature>/checkpoint/registro/<sha-curto>..<sha-curto>.md`,
+- **`arquivo`:** `.scratch/<feature>/checkpoint/registro/<sha-curto>..<sha-curto>.md`,
   um arquivo por checkpoint, nomeado pelo intervalo revisado.
-- **Modo tracker:** um comentário na issue pai, um por checkpoint, com o
+- **`tracker`:** um comentário na issue pai, um por checkpoint, com o
   intervalo no cabeçalho.
 
 Sem inconsistência nenhuma, só crie o registro se ele for o único marcador do
@@ -158,7 +201,7 @@ checkpoints anteriores são o funcionamento esperado.
 
 ## O commit dos dois
 
-Em modo arquivo, achados e registro entram num commit só, de assunto
+Com achado em `arquivo`, achados e registro entram num commit só, de assunto
 `docs(checkpoint): <resumo>`. O prefixo é o que faz o próximo ciclo subtrair este
 commit do conjunto que revisa — e é um dos dois marcadores pelos quais o §1
 encontra onde o ciclo anterior terminou.
@@ -174,7 +217,8 @@ commit sai vazio ou sem os arquivos — os achados somem sem erro nenhum. Se
 estiver ignorado, avise o usuário e reporte os achados no encerramento em vez de
 perdê-los.
 
-Em modo tracker não há commit: achado e registro são comentários na issue pai.
+Com achado em `tracker` não há commit: achado e registro são comentários na issue
+pai.
 
 ## Propostas de processo → ao usuário, textualmente
 
